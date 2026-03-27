@@ -505,16 +505,7 @@ fn apply_styles(
             );
             runner.run(program, &install_args, Some(project_dir))?;
 
-            runner.run(
-                "npx",
-                &[
-                    "tailwindcss".to_string(),
-                    "init".to_string(),
-                    "-p".to_string(),
-                ],
-                Some(project_dir),
-            )?;
-
+            // Create tailwind.config.js using the template
             let tailwind_config = project_dir.join("tailwind.config.js");
             let loader = TemplateLoader::new()?;
             fs::write(
@@ -523,6 +514,21 @@ fn apply_styles(
             )
             .with_context(|| format!("failed to write {}", tailwind_config.display()))?;
 
+            // Create postcss.config.js
+            let postcss_config = project_dir.join("postcss.config.js");
+            fs::write(
+                &postcss_config,
+                r#"export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+"#,
+            )
+            .with_context(|| format!("failed to write {}", postcss_config.display()))?;
+
+            // Update styles.scss with Tailwind directives
             let styles_scss = project_dir.join("src/styles.scss");
             fs::write(&styles_scss, loader.render("styles.scss.j2", ())?)
                 .with_context(|| format!("failed to write {}", styles_scss.display()))?;
