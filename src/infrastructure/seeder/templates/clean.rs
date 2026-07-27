@@ -58,9 +58,9 @@ pub(crate) fn patch_app_component_for_clean(
         "project_name": project_name,
     });
 
-    write_file(&app_ts, &loader.render("app.component.ts.j2", context)?)?;
+    write_file(&app_ts, &loader.render("app/app.component.ts.j2", context)?)?;
 
-    write_file(&app_html, &loader.render("app.component.html.j2", ())?)?;
+    write_file(&app_html, &loader.render("app/app.component.html.j2", ())?)?;
 
     Ok(())
 }
@@ -69,7 +69,7 @@ pub(crate) fn patch_app_config_for_clean(template_base: &Path, app_dir: &Path) -
     let loader = TemplateLoader::new(template_base)?;
     let app_config = app_dir.join("app.config.ts");
 
-    write_file(&app_config, &loader.render("app.config.ts.j2", ())?)
+    write_file(&app_config, &loader.render("app/app.config.ts.j2", ())?)
 }
 
 #[cfg(test)]
