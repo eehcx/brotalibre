@@ -1,13 +1,17 @@
 [package]
-name = "ngseed"
-version = "0.1.2"
+name = "brotalibre"
+version = "0.2.0"
 edition = "2024"
-description = "Angular project initializer with clean architecture scaffolding and optional UI integrations"
+description = "Scaffold production-ready Angular projects with clean architecture and optional UI integrations"
 license = "GPL-3.0"
-repository = "https://github.com/example/ng-seeder"
+repository = "https://github.com/eehcx/brotalibre"
 readme = "README.md"
 keywords = ["angular", "cli", "scaffold", "clean-architecture"]
 categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "brota"
+path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0"

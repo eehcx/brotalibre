@@ -65,6 +65,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "843867be96c8daad0d758b57df9392b6d8d271134fce549de6ce169ff98a92af"
 
 [[package]]
+name = "brotalibre"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "console",
+ "dialoguer",
+ "indicatif",
+ "minijinja",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.20.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -313,21 +328,6 @@ checksum = "328251e58ad8e415be6198888fc207502727dc77945806421ab34f35bf012e7d"
 dependencies = [
  "memo-map",
  "serde",
-]
-
-[[package]]
-name = "ngseed"
-version = "0.1.2"
-dependencies = [
- "anyhow",
- "clap",
- "console",
- "dialoguer",
- "indicatif",
- "minijinja",
- "serde",
- "serde_json",
- "tempfile",
 ]
 
 [[package]]

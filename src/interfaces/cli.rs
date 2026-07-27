@@ -9,11 +9,11 @@ use crate::domain::styles_choice::StylesChoice;
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "ngseed",
+    name = "brota",
     version,
-    about = "Initialize Angular projects with a clean architecture baseline",
+    about = "Scaffold production-ready Angular projects",
     long_about = "A modern CLI to scaffold Angular projects, apply architecture templates, and integrate a UI stack.",
-    after_help = "Examples:\n  ngseed new my-app --architecture clean\n  ngseed new my-app --architecture cdp --ui none\n  ngseed new my-app --yes --ui material --package-manager pnpm",
+    after_help = "Examples:\n  brota new my-app --architecture clean\n  brota new my-app --architecture cdp --ui none\n  brota new my-app --yes --ui material --package-manager pnpm",
     arg_required_else_help = true
 )]
 struct Cli {
@@ -157,7 +157,7 @@ mod tests {
     #[test]
     fn parse_new_command_with_all_flags() {
         let command = parse_from([
-            "ngseed",
+            "brota",
             "new",
             "demo",
             "--yes",

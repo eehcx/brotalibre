@@ -26,7 +26,7 @@ pub(crate) fn apply_cdp_architecture_template(project_dir: &Path) -> Result<()> 
     write_file(
         &app_dir.join("core/environment/app-environment.ts"),
         r#"export const appEnvironment = {
-  appName: 'ngseed-cdp-app',
+  appName: 'brotalibre-cdp-app',
   apiBaseUrl: '/api',
 };
 "#,
@@ -58,7 +58,7 @@ import { HealthStatus } from '../../../core/models/health-status.model';
 export class HealthRemoteDataSource {
   getStatus(): HealthStatus {
     return {
-      service: 'ngseed-cdp',
+      service: 'brotalibre-cdp',
       status: 'ok',
       checkedAt: new Date().toISOString(),
     };
@@ -73,7 +73,7 @@ export class HealthRemoteDataSource {
 
 @Injectable({ providedIn: 'root' })
 export class PreferencesLocalDataSource {
-  private readonly key = 'ngseed:theme';
+  private readonly key = 'brotalibre:theme';
 
   getTheme(): string {
     return localStorage.getItem(this.key) ?? 'light';
