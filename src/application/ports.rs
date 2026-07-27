@@ -30,6 +30,7 @@ pub trait Seeder {
         &self,
         project_dir: &Path,
         architecture: ArchitectureProfile,
+        project_name: &str,
     ) -> Result<()>;
     fn apply_ui_integration(
         &self,

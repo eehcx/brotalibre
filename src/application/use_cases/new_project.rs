@@ -74,10 +74,11 @@ impl<'a> NewProjectUseCase<'a> {
 
         self.reporter
             .stage_start("template", "applying architecture template");
-        if let Err(err) = self
-            .seeder
-            .apply_architecture_template(&absolute_project_dir, options.architecture)
-        {
+        if let Err(err) = self.seeder.apply_architecture_template(
+            &absolute_project_dir,
+            options.architecture,
+            &request.project_name,
+        ) {
             self.reporter
                 .stage_error("template", "template setup failed");
             return Err(err);
@@ -257,6 +258,7 @@ mod tests {
             &self,
             _project_dir: &Path,
             _architecture: ArchitectureProfile,
+            _project_name: &str,
         ) -> Result<()> {
             self.calls
                 .borrow_mut()

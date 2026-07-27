@@ -9,6 +9,7 @@ use crate::infrastructure::seeder::commands::write_file;
 pub(crate) fn apply_clean_architecture_template(
     template_base: &Path,
     project_dir: &Path,
+    project_name: &str,
 ) -> Result<()> {
     let app_dir = project_dir.join("src/app");
     if !app_dir.exists() {
@@ -18,45 +19,17 @@ pub(crate) fn apply_clean_architecture_template(
         );
     }
 
-    let loader = TemplateLoader::new(template_base)?;
-
-    write_file(
-        &app_dir.join("domain/entities/greeting.entity.ts"),
-        &loader.render("greeting.entity.ts.j2", ())?,
-    )?;
-
-    write_file(
-        &app_dir.join("domain/ports/greeting-repository.port.ts"),
-        &loader.render("greeting-repository.port.ts.j2", ())?,
-    )?;
-
-    write_file(
-        &app_dir.join("application/use-cases/get-greeting.use-case.ts"),
-        &loader.render("get-greeting.use-case.ts.j2", ())?,
-    )?;
-
-    write_file(
-        &app_dir.join("infrastructure/adapters/static-greeting.repository.ts"),
-        &loader.render("static-greeting.repository.ts.j2", ())?,
-    )?;
-
-    write_file(
-        &app_dir.join("infrastructure/providers/greeting.provider.ts"),
-        &loader.render("greeting.provider.ts.j2", ())?,
-    )?;
-
-    write_file(
-        &app_dir.join("presentation/facades/home.facade.ts"),
-        &loader.render("home.facade.ts.j2", ())?,
-    )?;
-
-    patch_app_component_for_clean(template_base, &app_dir)?;
+    patch_app_component_for_clean(template_base, &app_dir, project_name)?;
     patch_app_config_for_clean(template_base, &app_dir)?;
 
     Ok(())
 }
 
-pub(crate) fn patch_app_component_for_clean(template_base: &Path, app_dir: &Path) -> Result<()> {
+pub(crate) fn patch_app_component_for_clean(
+    template_base: &Path,
+    app_dir: &Path,
+    project_name: &str,
+) -> Result<()> {
     let loader = TemplateLoader::new(template_base)?;
 
     let (app_ts, app_html, template_url, style_url, component_class) =
@@ -81,7 +54,8 @@ pub(crate) fn patch_app_component_for_clean(template_base: &Path, app_dir: &Path
     let context = json!({
         "template_url": template_url,
         "style_url": style_url,
-        "component_class": component_class
+        "component_class": component_class,
+        "project_name": project_name,
     });
 
     write_file(&app_ts, &loader.render("app.component.ts.j2", context)?)?;
@@ -107,7 +81,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn clean_template_creates_layered_files() {
+    fn clean_template_patches_app_files() {
         let tmp = tempdir().unwrap();
         let project_dir = tmp.path().join("demo");
         let app_dir = project_dir.join("src/app");
@@ -118,17 +92,10 @@ mod tests {
 
         let template_base = std::env::current_dir().unwrap().join("templates/angular");
 
-        apply_clean_architecture_template(&template_base, &project_dir).unwrap();
+        apply_clean_architecture_template(&template_base, &project_dir, "demo-app").unwrap();
 
-        assert!(app_dir
-            .join("domain/ports/greeting-repository.port.ts")
-            .exists());
-        assert!(app_dir
-            .join("application/use-cases/get-greeting.use-case.ts")
-            .exists());
-        assert!(app_dir
-            .join("infrastructure/providers/greeting.provider.ts")
-            .exists());
-        assert!(app_dir.join("presentation/facades/home.facade.ts").exists());
+        assert!(app_dir.join("app.ts").exists());
+        assert!(app_dir.join("app.html").exists());
+        assert!(app_dir.join("app.config.ts").exists());
     }
 }

@@ -35,6 +35,7 @@ impl Seeder for SystemSeeder {
         &self,
         project_dir: &Path,
         architecture: ArchitectureProfile,
+        project_name: &str,
     ) -> Result<()> {
         let template_base = std::env::current_dir()
             .map(|p| p.join("templates").join("angular"))
@@ -42,7 +43,11 @@ impl Seeder for SystemSeeder {
 
         match architecture {
             ArchitectureProfile::Clean => {
-                templates::clean::apply_clean_architecture_template(&template_base, project_dir)
+                templates::clean::apply_clean_architecture_template(
+                    &template_base,
+                    project_dir,
+                    project_name,
+                )
             }
             ArchitectureProfile::Cdp => {
                 templates::cdp::apply_cdp_architecture_template(project_dir)
