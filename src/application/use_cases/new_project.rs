@@ -34,14 +34,7 @@ impl<'a> NewProjectUseCase<'a> {
     }
 
     pub fn execute(&self, request: NewProjectRequest) -> Result<()> {
-        let options = self.resolve_options(
-            request.ui,
-            request.package_manager,
-            request.styles,
-            request.architecture,
-            request.skip_install,
-            request.yes,
-        )?;
+        let options = self.resolve_options(&request)?;
 
         if !request.yes && !self.env.is_ci() && self.env.is_interactive_terminal() {
             //self.reporter.show_banner();
@@ -125,48 +118,41 @@ impl<'a> NewProjectUseCase<'a> {
         Ok(())
     }
 
-    fn resolve_options(
-        &self,
-        cli_ui: Option<UiChoice>,
-        cli_package_manager: Option<PackageManager>,
-        cli_styles: Option<StylesChoice>,
-        cli_architecture: Option<ArchitectureProfile>,
-        skip_install: bool,
-        yes: bool,
-    ) -> Result<ResolvedOptions> {
-        let package_manager = if let Some(value) = cli_package_manager {
+    fn resolve_options(&self, request: &NewProjectRequest) -> Result<ResolvedOptions> {
+        let package_manager = if let Some(value) = request.package_manager {
             value
-        } else if yes {
+        } else if request.yes {
             PackageManager::Npm
         } else {
             self.ui_selector.select_package_manager()?
         };
 
-        let architecture = if let Some(value) = cli_architecture {
+        let architecture = if let Some(value) = request.architecture {
             value
-        } else if yes {
+        } else if request.yes {
             ArchitectureProfile::Clean
         } else {
             self.ui_selector.select_architecture()?
         };
 
-        if yes {
+        if request.yes {
             return Ok(ResolvedOptions {
-                ui: cli_ui.unwrap_or(UiChoice::None),
-                styles: cli_styles.unwrap_or(StylesChoice::None),
+                ui: request.ui.unwrap_or(UiChoice::None),
+                styles: request.styles.unwrap_or(StylesChoice::None),
                 package_manager,
                 architecture,
-                skip_install,
+                skip_install: request.skip_install,
+                skip_git: request.skip_git,
             });
         }
 
-        let ui = if let Some(value) = cli_ui {
+        let ui = if let Some(value) = request.ui {
             value
         } else {
             self.ui_selector.select_ui()?
         };
 
-        let styles = if let Some(value) = cli_styles {
+        let styles = if let Some(value) = request.styles {
             value
         } else {
             self.ui_selector.select_styles()?
@@ -177,7 +163,8 @@ impl<'a> NewProjectUseCase<'a> {
             styles,
             package_manager,
             architecture,
-            skip_install,
+            skip_install: request.skip_install,
+            skip_git: request.skip_git,
         })
     }
 }
@@ -333,6 +320,7 @@ mod tests {
                 package_manager: Some(PackageManager::Npm),
                 architecture: Some(ArchitectureProfile::Clean),
                 skip_install: true,
+                skip_git: false,
                 yes: true,
             })
             .unwrap();

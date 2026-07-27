@@ -41,6 +41,7 @@ Flags:
 - `--package-manager <npm|pnpm|yarn|bun>`
 - `--architecture <clean|cdp>`
 - `--skip-install`
+- `--skip-git`
 - `--yes`
 
 Version:

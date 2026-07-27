@@ -9,7 +9,7 @@ use application::use_cases::new_project::NewProjectUseCase;
 use infrastructure::console_progress_reporter::ConsoleProgressReporter;
 use infrastructure::dialoguer_ui_selector::DialoguerUiSelector;
 use infrastructure::system_environment::SystemEnvironment;
-use infrastructure::system_seeder::SystemSeeder;
+use infrastructure::seeder::SystemSeeder;
 
 const BANNER: &str = r#"
                                    _ 

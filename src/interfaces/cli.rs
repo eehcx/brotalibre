@@ -46,6 +46,9 @@ struct NewCommand {
     skip_install: bool,
 
     #[arg(long)]
+    skip_git: bool,
+
+    #[arg(long)]
     yes: bool,
 }
 
@@ -102,6 +105,7 @@ fn map_cli_to_command(cli: Cli) -> AppCommand {
             package_manager: cmd.package_manager.map(Into::into),
             architecture: cmd.architecture.map(Into::into),
             skip_install: cmd.skip_install,
+            skip_git: cmd.skip_git,
             yes: cmd.yes,
         }),
     }

@@ -28,6 +28,7 @@ pub struct ResolvedOptions {
     pub package_manager: PackageManager,
     pub architecture: ArchitectureProfile,
     pub skip_install: bool,
+    pub skip_git: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -38,5 +39,6 @@ pub struct NewProjectRequest {
     pub package_manager: Option<PackageManager>,
     pub architecture: Option<ArchitectureProfile>,
     pub skip_install: bool,
+    pub skip_git: bool,
     pub yes: bool,
 }
