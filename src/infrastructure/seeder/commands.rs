@@ -85,7 +85,13 @@ pub(crate) fn scaffold_angular_project(
         args.push("--skip-git".to_string());
     }
 
-    runner.run("ng", &args, None)
+    runner.run("ng", &args, None)?;
+
+    if options.package_manager == PackageManager::Yarn {
+        write_yarnrc(project_name)?;
+    }
+
+    Ok(())
 }
 
 pub(crate) fn package_manager_cli_name(package_manager: PackageManager) -> &'static str {
@@ -172,6 +178,13 @@ pub(crate) fn write_file(path: &Path, content: &str) -> Result<()> {
     fs::write(path, content).with_context(|| format!("failed to write {}", path.display()))
 }
 
+fn write_yarnrc(project_name: &str) -> Result<()> {
+    let content = "nodeLinker: node-modules\n";
+    let path = Path::new(project_name).join(".yarnrc.yml");
+    fs::write(&path, content)
+        .with_context(|| format!("failed to write .yarnrc.yml at {}", path.display()))
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
@@ -179,6 +192,8 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
+    use crate::domain::project::{ArchitectureProfile, ResolvedOptions, UiChoice};
+    use crate::domain::styles_choice::StylesChoice;
 
     #[derive(Default)]
     struct FakeRunner {
@@ -258,6 +273,53 @@ mod tests {
         let (program, args) = package_manager_install_command(PackageManager::Bun, &["primeng"]);
         assert_eq!(program, "bun");
         assert_eq!(args, vec!["add".to_string(), "primeng".to_string()]);
+    }
+
+    #[test]
+    fn write_yarnrc_creates_file_with_node_linker() {
+        let tmp = tempdir().unwrap();
+        let project_dir = tmp.path().join("test-project");
+        fs::create_dir_all(&project_dir).unwrap();
+
+        super::write_yarnrc(project_dir.to_str().unwrap()).unwrap();
+
+        let content = fs::read_to_string(project_dir.join(".yarnrc.yml")).unwrap();
+        assert_eq!(content, "nodeLinker: node-modules\n");
+    }
+
+    #[test]
+    fn scaffold_with_yarn_writes_yarnrc() {
+        let tmp = tempdir().unwrap();
+        let project_name = "yarn-project";
+        let project_dir = tmp.path().join(project_name);
+        fs::create_dir_all(&project_dir).unwrap();
+
+        // FakeRunner that succeeds
+        let mut runner = FakeRunner::default();
+
+        // Temporarily change cwd so we can write files in tmp
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(tmp.path()).unwrap();
+
+        let result = scaffold_angular_project(
+            &mut runner,
+            project_name,
+            ResolvedOptions {
+                ui: UiChoice::None,
+                styles: StylesChoice::None,
+                package_manager: PackageManager::Yarn,
+                architecture: ArchitectureProfile::Clean,
+                skip_install: true,
+                skip_git: true,
+            },
+        );
+        std::env::set_current_dir(original_dir).unwrap();
+
+        assert!(result.is_ok());
+        let yarnrc = project_dir.join(".yarnrc.yml");
+        assert!(yarnrc.exists());
+        let content = fs::read_to_string(&yarnrc).unwrap();
+        assert_eq!(content, "nodeLinker: node-modules\n");
     }
 
     #[test]
