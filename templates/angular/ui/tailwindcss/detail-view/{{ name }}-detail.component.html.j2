@@ -26,10 +26,8 @@
         <a routerLink="../" class="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50">
           Back
         </a>
-        
-          [routerLink]="['../', id(), 'edit']"
-          class="px-4 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700"
-        >
+        <a [routerLink]="['../', id(), 'edit']"
+          class="px-4 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700">
           Edit
         </a>
       </div>

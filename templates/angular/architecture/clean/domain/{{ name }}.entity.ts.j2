@@ -1,23 +1,50 @@
+import { {{ name }}Id } from './value-objects/{{ name_kebab }}-id.vo';
+import { {{ name }}Validator, {{ name }}ValidationError } from './{{ name_kebab }}.errors';
+
+export interface {{ name }}Props {
+  id?: {{ name }}Id;
+{% for field in fields %}
+  {{ field.name }}: {{ field.type }};
+{% endfor %}
+}
+
 export class {{ name }} {
-  constructor(
-    {% for field in fields %}
-    public readonly {{ field.name }}: {{ field.type }}{% if not field.required %} | null{% endif %},
-    {% endfor %}
+  private constructor(
+    public readonly id: {{ name }}Id,
+{% for field in fields %}
+    public readonly {{ field.name }}: {{ field.type }},
+{% endfor %}
   ) {}
 
-  static fromJson(json: Record<string, unknown>): {{ name }} {
+  static create(props: {{ name }}Props): {{ name }} {
+    const errors = {{ name }}Validator.validate(props);
+    if (errors.length > 0) {
+      throw new {{ name }}ValidationError(errors);
+    }
+
     return new {{ name }}(
-      {% for field in fields %}
-      json['{{ field.name }}'] as {{ field.type }}{% if not field.required %} ?? null{% endif %},
-      {% endfor %}
+      props.id ?? {{ name }}Id.generate(),
+{% for field in fields %}
+      props.{{ field.name }},
+{% endfor %}
     );
   }
 
-  toJson(): Record<string, unknown> {
+{% for field in fields %}
+  rename{{ field.name | capitalize }}(value: {{ field.type }}): {{ name }} {
+    return {{ name }}.create({
+      ...this.toSnapshot(),
+      {{ field.name }}: value,
+    });
+  }
+{% endfor %}
+
+  toSnapshot(): {{ name }}Props {
     return {
-      {% for field in fields %}
+      id: this.id,
+{% for field in fields %}
       {{ field.name }}: this.{{ field.name }},
-      {% endfor %}
+{% endfor %}
     };
   }
 }

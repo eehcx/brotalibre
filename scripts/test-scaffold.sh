@@ -7,7 +7,7 @@
 #   ./scripts/test-scaffold.sh [options]
 #
 # Options:
-#   --architecture <clean|cdp>     Architecture profile (default: clean)
+#   --architecture <clean|ddd>     Architecture profile (default: clean)
 #   --ui <material|primeng|none>   UI library (default: none)
 #   --styles <tailwindcss|none>    Style framework (default: none)
 #   --package-manager <npm|pnpm|yarn|bun>  (default: npm)
@@ -137,25 +137,27 @@ validate_clean() {
   [ "$e" -eq 0 ] && ok "Clean Architecture structure OK"
 }
 
-validate_cdp() {
+validate_ddd() {
   local dir="$1"
-  info "Validating CDP Architecture structure..."
+  info "Validating DDD Architecture structure..."
   local e=0
 
+  if [ -d "$dir/src/app/features" ]; then
+    ok "src/app/features/"
+  else
+    fail "missing src/app/features/"
+    e=1
+  fi
+
   for f in \
-    "src/app/core/models/health-status.model.ts" \
-    "src/app/core/environment/app-environment.ts" \
-    "src/app/core/commons/logger.ts" \
-    "src/app/core/auth/auth.types.ts" \
-    "src/app/data/datasource/remote/health.datasource.ts" \
-    "src/app/data/datasource/local/preferences.datasource.ts" \
-    "src/app/presentation/pages/health/health.page.ts" \
-    "src/app/presentation/pages/health/health.page.html" \
-    "src/app/app.routes.ts"
+    "src/app/app.config.ts" \
+    "src/app/app.ts" \
+    "src/app/app.html"
   do
     if [ -f "$dir/$f" ]; then ok "$f"; else fail "missing $f"; e=1; fi
   done
-  [ "$e" -eq 0 ] && ok "CDP Architecture structure OK"
+
+  [ "$e" -eq 0 ] && ok "DDD Architecture structure OK"
 }
 
 validate_basics() {
@@ -234,6 +236,42 @@ validate_no_git() {
   [ ! -d "$dir/.git" ] && ok "no .git directory" || fail ".git exists but --skip-git was used"
 }
 
+validate_feature() {
+  local dir="$1"
+  local arch="$2"
+  local feature="$3"
+  info "Validating generated feature '$feature' ($arch)..."
+  local e=0
+
+  local base
+  case "$arch" in
+    clean) base="$dir/src/app" ;;
+    ddd)   base="$dir/src/app/features/$feature" ;;
+  esac
+
+  for f in \
+    "domain/${feature}.entity.ts" \
+    "domain/${feature}-repository.port.ts" \
+    "domain/${feature}.errors.ts" \
+    "domain/value-objects/${feature}-id.vo.ts" \
+    "application/${feature}.store.ts" \
+    "application/getall-${feature}.use-case.ts" \
+    "application/getbyid-${feature}.use-case.ts" \
+    "application/create-${feature}.use-case.ts" \
+    "application/update-${feature}.use-case.ts" \
+    "application/delete-${feature}.use-case.ts" \
+    "infrastructure/dto/${feature}.request.dto.ts" \
+    "infrastructure/dto/${feature}.response.dto.ts" \
+    "infrastructure/mappers/${feature}.mapper.ts" \
+    "infrastructure/${feature}.repository.ts" \
+    "infrastructure/${feature}.provider.ts"
+  do
+    if [ -f "$base/$f" ]; then ok "$f"; else fail "missing $f"; e=1; fi
+  done
+
+  [ "$e" -eq 0 ] && ok "Feature '$feature' structure OK ($arch)"
+}
+
 # ── Run single test combo ──────────────────────────────────
 run_test() {
   local arch="$1"
@@ -290,7 +328,7 @@ run_test() {
 
   case "$arch" in
     clean) validate_clean "$PROJECT_DIR" ;;
-    cdp)   validate_cdp   "$PROJECT_DIR" ;;
+    ddd)   validate_ddd   "$PROJECT_DIR" ;;
   esac
 
   case "$ui" in
@@ -304,10 +342,28 @@ run_test() {
 
   [ -n "$skip_git" ] && validate_no_git "$PROJECT_DIR"
 
+  # ── Generate feature (validates brota generate feature subcommand) ──
+  # Run from $TMPDIR (where templates/ symlink lives) and pass --project-dir
+  local FEATURE_NAME="test-entity"
+  local GEN_ARGS=("generate" "feature" "$FEATURE_NAME"
+    "--architecture" "$arch"
+    "--prefix" "api"
+    "--fields" "name:string,age:number,email:string"
+    "--project-dir" "$PROJECT_DIR"
+  )
+  info "Running: brota ${GEN_ARGS[*]}"
+  if ! (cd "$TMPDIR" && "$BROTA_BIN" "${GEN_ARGS[@]}") > /dev/null 2>&1; then
+    fail "brota generate feature failed"
+    [ "$KEEP" = false ] && rm -rf "$TMPDIR"
+    return
+  fi
+  ok "brota generate feature completed"
+  validate_feature "$PROJECT_DIR" "$arch" "$FEATURE_NAME"
+
   # ── Build (optional) ──
   if [ "$build" = true ]; then
-    info "Running npm install..."
-    if (cd "$PROJECT_DIR" && npm install --silent) > /dev/null 2>&1; then
+    info "Running npm install (legacy-peer-deps)..."
+    if (cd "$PROJECT_DIR" && npm install --silent --legacy-peer-deps) > /dev/null 2>&1; then
       ok "npm install completed"
     else
       fail "npm install failed"
@@ -350,7 +406,7 @@ if [ "$ALL" = true ]; then
   if [ "$DO_SERVE" = true ]; then
     warn "Ignoring --serve in --all mode (would run 12 servers). Use a single combo."
   fi
-  for arch in clean cdp; do
+  for arch in clean ddd; do
     for ui in none material primeng; do
       for styles in none tailwindcss; do
         run_test "$arch" "$ui" "$styles" "$PACKAGE_MANAGER" "$SKIP_GIT" "$DO_BUILD" "$DO_SERVE"

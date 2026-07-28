@@ -1,10 +1,10 @@
-import { Observable } from 'rxjs';
-import { {{ name }} } from './{{ name_kebab }}.entity';
+import type { {{ name }} } from './{{ name_kebab }}.entity';
+import type { {{ name }}Id } from './value-objects/{{ name_kebab }}-id.vo';
 
 export abstract class {{ name }}RepositoryPort {
-  abstract getAll(): Observable<{{ name }}[]>;
-  abstract getById(id: string): Observable<{{ name }}>;
-  abstract create(entity: {{ name }}): Observable<{{ name }}>;
-  abstract update(id: string, entity: {{ name }}): Observable<{{ name }}>;
-  abstract delete(id: string): Observable<void>;
+  abstract getAll(): Promise<{{ name }}[]>;
+  abstract getById(id: {{ name }}Id): Promise<{{ name }}>;
+  abstract create(entity: {{ name }}): Promise<{{ name }}>;
+  abstract update(entity: {{ name }}): Promise<{{ name }}>;
+  abstract delete(id: {{ name }}Id): Promise<void>;
 }
