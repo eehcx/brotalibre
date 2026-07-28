@@ -68,7 +68,7 @@ impl UiSelector for DialoguerUiSelector {
     }
 
     fn select_architecture(&self) -> Result<ArchitectureProfile> {
-        let choices = ["clean", "cdp"];
+        let choices = ["clean", "ddd"];
         let selected = Select::with_theme(&ColorfulTheme::default())
             .with_prompt("Select architecture profile")
             .items(&choices)
@@ -78,7 +78,7 @@ impl UiSelector for DialoguerUiSelector {
 
         let profile = match selected {
             0 => ArchitectureProfile::Clean,
-            1 => ArchitectureProfile::Cdp,
+            1 => ArchitectureProfile::Ddd,
             _ => ArchitectureProfile::Clean,
         };
 

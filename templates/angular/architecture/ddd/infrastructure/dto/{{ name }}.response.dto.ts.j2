@@ -1,0 +1,15 @@
+export interface {{ name }}ResponseDto {
+{% for field in fields %}
+  {{ field.name }}: {{ field.type }};
+{% endfor %}
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface {{ name }}ListResponseDto {
+  data: {{ name }}ResponseDto[];
+  total: number;
+  page: number;
+  pageSize: number;
+}

@@ -6,7 +6,7 @@ use serde_json::json;
 use super::TemplateLoader;
 use crate::infrastructure::seeder::commands::write_file;
 
-pub(crate) fn apply_clean_architecture_template(
+pub(crate) fn apply_ddd_architecture_template(
     template_base: &Path,
     project_dir: &Path,
     project_name: &str,
@@ -19,21 +19,26 @@ pub(crate) fn apply_clean_architecture_template(
         );
     }
 
-    patch_app_component_for_clean(template_base, &app_dir, project_name)?;
-    patch_app_config_for_clean(template_base, &app_dir)?;
+    patch_app_component_for_ddd(template_base, &app_dir, project_name)?;
+    patch_app_config_for_ddd(template_base, &app_dir)?;
+
+    let features_dir = app_dir.join("features");
+    std::fs::create_dir_all(&features_dir)
+        .with_context(|| format!("failed to create {}", features_dir.display()))?;
 
     Ok(())
 }
 
-pub(crate) fn apply_clean_feature_template(
+pub(crate) fn apply_ddd_feature_template(
     template_base: &Path,
-    feature_dir: &Path,
+    features_dir: &Path,
     name: &str,
     prefix: &str,
     fields: &[serde_json::Value],
 ) -> Result<()> {
     let loader = TemplateLoader::new(template_base)?;
     let name_kebab = name.to_string().to_lowercase().replace(' ', "-");
+    let feature_dir = features_dir.join(&name_kebab);
     let name_pascal = name_kebab
         .split('-')
         .map(|w| {
@@ -70,10 +75,10 @@ pub(crate) fn apply_clean_feature_template(
         "fields": fields,
     });
 
-    write_file(&domain_dir.join(format!("{}.entity.ts", name_kebab)), &loader.render("architecture/clean/domain/{{ name }}.entity.ts.j2", ctx.clone())?)?;
-    write_file(&domain_dir.join(format!("{}-repository.port.ts", name_kebab)), &loader.render("architecture/clean/domain/{{ name }}-repository.port.ts.j2", ctx.clone())?)?;
-    write_file(&domain_dir.join(format!("{}.errors.ts", name_kebab)), &loader.render("architecture/clean/domain/{{ name }}.errors.ts.j2", ctx.clone())?)?;
-    write_file(&vo_dir.join(format!("{}-id.vo.ts", name_kebab)), &loader.render("architecture/clean/domain/value-objects/{{ name }}-id.vo.ts.j2", ctx.clone())?)?;
+    write_file(&domain_dir.join(format!("{}.entity.ts", name_kebab)), &loader.render("architecture/ddd/domain/{{ name }}.entity.ts.j2", ctx.clone())?)?;
+    write_file(&domain_dir.join(format!("{}-repository.port.ts", name_kebab)), &loader.render("architecture/ddd/domain/{{ name }}-repository.port.ts.j2", ctx.clone())?)?;
+    write_file(&domain_dir.join(format!("{}.errors.ts", name_kebab)), &loader.render("architecture/ddd/domain/{{ name }}.errors.ts.j2", ctx.clone())?)?;
+    write_file(&vo_dir.join(format!("{}-id.vo.ts", name_kebab)), &loader.render("architecture/ddd/domain/value-objects/{{ name }}-id.vo.ts.j2", ctx.clone())?)?;
     write_file(&application_dir.join(format!("{}.store.ts", name_kebab)), &loader.render("state/{{ name }}.store.ts.j2", ctx.clone())?)?;
 
     for action in &["GetAll", "GetById", "Create", "Update", "Delete"] {
@@ -83,19 +88,19 @@ pub(crate) fn apply_clean_feature_template(
             "name_snake": name_snake,
             "action": action,
         });
-        write_file(&application_dir.join(format!("{}-{}.use-case.ts", action.to_lowercase(), name_kebab)), &loader.render("architecture/clean/application/{{ action }}.use-case.ts.j2", action_ctx)?)?;
+        write_file(&application_dir.join(format!("{}-{}.use-case.ts", action.to_lowercase(), name_kebab)), &loader.render("architecture/ddd/application/{{ action }}.use-case.ts.j2", action_ctx)?)?;
     }
 
-    write_file(&dto_dir.join(format!("{}.request.dto.ts", name_kebab)), &loader.render("architecture/clean/infrastructure/dto/{{ name }}.request.dto.ts.j2", ctx.clone())?)?;
-    write_file(&dto_dir.join(format!("{}.response.dto.ts", name_kebab)), &loader.render("architecture/clean/infrastructure/dto/{{ name }}.response.dto.ts.j2", ctx.clone())?)?;
-    write_file(&mapper_dir.join(format!("{}.mapper.ts", name_kebab)), &loader.render("architecture/clean/infrastructure/mappers/{{ name }}.mapper.ts.j2", ctx.clone())?)?;
-    write_file(&infra_dir.join(format!("{}.repository.ts", name_kebab)), &loader.render("architecture/clean/infrastructure/{{ name }}.repository.ts.j2", ctx.clone())?)?;
-    write_file(&infra_dir.join(format!("{}.provider.ts", name_kebab)), &loader.render("architecture/clean/infrastructure/{{ name }}.provider.ts.j2", ctx)?)?;
+    write_file(&dto_dir.join(format!("{}.request.dto.ts", name_kebab)), &loader.render("architecture/ddd/infrastructure/dto/{{ name }}.request.dto.ts.j2", ctx.clone())?)?;
+    write_file(&dto_dir.join(format!("{}.response.dto.ts", name_kebab)), &loader.render("architecture/ddd/infrastructure/dto/{{ name }}.response.dto.ts.j2", ctx.clone())?)?;
+    write_file(&mapper_dir.join(format!("{}.mapper.ts", name_kebab)), &loader.render("architecture/ddd/infrastructure/mappers/{{ name }}.mapper.ts.j2", ctx.clone())?)?;
+    write_file(&infra_dir.join(format!("{}.repository.ts", name_kebab)), &loader.render("architecture/ddd/infrastructure/{{ name }}.repository.ts.j2", ctx.clone())?)?;
+    write_file(&infra_dir.join(format!("{}.provider.ts", name_kebab)), &loader.render("architecture/ddd/infrastructure/{{ name }}.provider.ts.j2", ctx)?)?;
 
     Ok(())
 }
 
-pub(crate) fn patch_app_component_for_clean(
+pub(crate) fn patch_app_component_for_ddd(
     template_base: &Path,
     app_dir: &Path,
     project_name: &str,
@@ -129,16 +134,14 @@ pub(crate) fn patch_app_component_for_clean(
     });
 
     write_file(&app_ts, &loader.render("app/app.component.ts.j2", context)?)?;
-
     write_file(&app_html, &loader.render("app/app.component.html.j2", ())?)?;
 
     Ok(())
 }
 
-pub(crate) fn patch_app_config_for_clean(template_base: &Path, app_dir: &Path) -> Result<()> {
+pub(crate) fn patch_app_config_for_ddd(template_base: &Path, app_dir: &Path) -> Result<()> {
     let loader = TemplateLoader::new(template_base)?;
     let app_config = app_dir.join("app.config.ts");
-
     write_file(&app_config, &loader.render("app/app.config.ts.j2", ())?)
 }
 
@@ -161,7 +164,11 @@ mod tests {
         fs::write(app_dir.join("app.config.ts"), "").unwrap();
     }
 
-    fn feature_files(feature_dir: &std::path::Path, name_kebab: &str) -> Vec<std::path::PathBuf> {
+    fn feature_files(
+        features_dir: &std::path::Path,
+        name_kebab: &str,
+    ) -> Vec<std::path::PathBuf> {
+        let feature_dir = features_dir.join(name_kebab);
         vec![
             feature_dir.join("domain").join(format!("{}.entity.ts", name_kebab)),
             feature_dir.join("domain").join(format!("{}-repository.port.ts", name_kebab)),
@@ -182,32 +189,36 @@ mod tests {
     }
 
     #[test]
-    fn clean_template_patches_app_files() {
+    fn ddd_template_patches_app_files() {
         let tmp = tempdir().unwrap();
         let project_dir = tmp.path().join("demo");
         let app_dir = project_dir.join("src/app");
         create_app_dir(&app_dir);
 
-        apply_clean_architecture_template(&template_base(), &project_dir, "demo-app").unwrap();
+        apply_ddd_architecture_template(&template_base(), &project_dir, "demo-app").unwrap();
 
         assert!(app_dir.join("app.ts").exists());
         assert!(app_dir.join("app.html").exists());
         assert!(app_dir.join("app.config.ts").exists());
+        assert!(app_dir.join("features").exists());
     }
 
     #[test]
-    fn clean_feature_creates_all_15_files() {
+    fn ddd_feature_creates_all_15_files() {
         let tmp = tempdir().unwrap();
-        let app_dir = tmp.path().join("src/app");
+        let project_dir = tmp.path().join("demo");
+        let app_dir = project_dir.join("src/app");
         create_app_dir(&app_dir);
+        apply_ddd_architecture_template(&template_base(), &project_dir, "demo-app").unwrap();
 
+        let features_dir = app_dir.join("features");
         let fields = vec![
             serde_json::json!({"name": "email", "type": "string"}),
             serde_json::json!({"name": "age", "type": "number"}),
         ];
-        apply_clean_feature_template(&template_base(), &app_dir, "user", "api", &fields).unwrap();
+        apply_ddd_feature_template(&template_base(), &features_dir, "user", "api", &fields).unwrap();
 
-        let files = feature_files(&app_dir, "user");
+        let files = feature_files(&features_dir, "user");
         for f in &files {
             assert!(f.exists(), "missing file: {}", f.display());
         }
@@ -215,32 +226,34 @@ mod tests {
     }
 
     #[test]
-    fn clean_feature_uses_kebab_pascal_snake_casing() {
+    fn ddd_feature_uses_kebab_pascal_snake_casing() {
         let tmp = tempdir().unwrap();
-        let app_dir = tmp.path().join("src/app");
+        let project_dir = tmp.path().join("demo");
+        let app_dir = project_dir.join("src/app");
         create_app_dir(&app_dir);
+        apply_ddd_architecture_template(&template_base(), &project_dir, "demo-app").unwrap();
 
-        apply_clean_feature_template(
+        let features_dir = app_dir.join("features");
+        apply_ddd_feature_template(
             &template_base(),
-            &app_dir,
+            &features_dir,
             "my-feature",
             "api",
             &[],
         )
         .unwrap();
 
-        let files = feature_files(&app_dir, "my-feature");
+        let files = feature_files(&features_dir, "my-feature");
         for f in &files {
             assert!(f.exists(), "missing file: {}", f.display());
         }
     }
 
     #[test]
-    fn clean_feature_fails_when_app_dir_missing() {
+    fn ddd_feature_fails_when_app_dir_missing() {
         let tmp = tempdir().unwrap();
-        let _app_dir = tmp.path().join("src/app");
 
-        let result = apply_clean_architecture_template(
+        let result = apply_ddd_architecture_template(
             &template_base(),
             &tmp.path().join("demo"),
             "demo-app",
@@ -249,36 +262,41 @@ mod tests {
     }
 
     #[test]
-    fn clean_feature_with_multiple_word_name() {
+    fn ddd_feature_with_multiple_word_name() {
         let tmp = tempdir().unwrap();
-        let app_dir = tmp.path().join("src/app");
+        let project_dir = tmp.path().join("demo");
+        let app_dir = project_dir.join("src/app");
         create_app_dir(&app_dir);
+        apply_ddd_architecture_template(&template_base(), &project_dir, "demo-app").unwrap();
 
-        apply_clean_feature_template(
+        let features_dir = app_dir.join("features");
+        apply_ddd_feature_template(
             &template_base(),
-            &app_dir,
+            &features_dir,
             "shopping cart",
             "api",
-            &[serde_json::json!({"name": "items", "type": "array"})],
+            &[serde_json::json!({"name": "items", "type": "string"})],
         )
         .unwrap();
 
-        let files = feature_files(&app_dir, "shopping-cart");
+        let files = feature_files(&features_dir, "shopping-cart");
         for f in &files {
             assert!(f.exists(), "missing file: {}", f.display());
         }
     }
 
     #[test]
-    fn clean_feature_fails_without_template_dir() {
+    fn ddd_feature_fails_without_template_dir() {
         let tmp = tempdir().unwrap();
-        let app_dir = tmp.path().join("src/app");
+        let project_dir = tmp.path().join("demo");
+        let app_dir = project_dir.join("src/app");
         create_app_dir(&app_dir);
+        apply_ddd_architecture_template(&template_base(), &project_dir, "demo-app").unwrap();
 
         let bad_base = tmp.path().join("no-templates");
-        let result = apply_clean_feature_template(
+        let result = apply_ddd_feature_template(
             &bad_base,
-            &app_dir,
+            &app_dir.join("features"),
             "user",
             "api",
             &[],

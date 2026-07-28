@@ -32,6 +32,14 @@ pub trait Seeder {
         architecture: ArchitectureProfile,
         project_name: &str,
     ) -> Result<()>;
+    fn apply_feature_template(
+        &self,
+        project_dir: &Path,
+        architecture: ArchitectureProfile,
+        name: &str,
+        prefix: &str,
+        fields: &[String],
+    ) -> Result<()>;
     fn apply_ui_integration(
         &self,
         project_dir: &Path,

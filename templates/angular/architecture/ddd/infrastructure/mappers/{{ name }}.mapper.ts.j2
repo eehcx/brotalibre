@@ -1,0 +1,29 @@
+import { {{ name }} } from '../../domain/{{ name_kebab }}.entity';
+import { {{ name }}Id } from '../../domain/value-objects/{{ name_kebab }}-id.vo';
+import type { {{ name }}ResponseDto, {{ name }}ListResponseDto } from '../dto/{{ name_kebab }}.response.dto';
+import type { {{ name }}RequestDto } from '../dto/{{ name_kebab }}.request.dto';
+
+export function mapResponseToEntity(dto: {{ name }}ResponseDto): {{ name }} {
+  return {{ name }}.create({
+    id: {{ name }}Id.from(dto.id),
+    {% for field in fields %}
+    {% if field.name != 'id' %}
+    {{ field.name }}: dto.{{ field.name }},
+    {% endif %}
+    {% endfor %}
+  });
+}
+
+export function mapEntityToRequest(entity: {{ name }}): {{ name }}RequestDto {
+  return {
+    {% for field in fields %}
+    {% if field.name != 'id' and field.name != 'createdAt' and field.name != 'updatedAt' %}
+    {{ field.name }}: entity.{{ field.name }},
+    {% endif %}
+    {% endfor %}
+  };
+}
+
+export function mapListResponseToEntities(dto: {{ name }}ListResponseDto): {{ name }}[] {
+  return dto.data.map(mapResponseToEntity);
+}

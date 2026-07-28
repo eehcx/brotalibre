@@ -1,0 +1,51 @@
+import { inject, Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { lastValueFrom } from 'rxjs';
+import type { {{ name }} } from '../domain/{{ name_kebab }}.entity';
+import type { {{ name }}Id } from '../domain/value-objects/{{ name_kebab }}-id.vo';
+import { {{ name }}RepositoryPort } from '../domain/{{ name_kebab }}-repository.port';
+import type { {{ name }}ResponseDto, {{ name }}ListResponseDto } from './dto/{{ name_kebab }}.response.dto';
+import type { {{ name }}RequestDto } from './dto/{{ name_kebab }}.request.dto';
+import { mapResponseToEntity, mapEntityToRequest, mapListResponseToEntities } from './mappers/{{ name_kebab }}.mapper';
+
+@Injectable({ providedIn: 'root' })
+export class {{ name }}Repository implements {{ name }}RepositoryPort {
+  readonly #http = inject(HttpClient);
+  readonly #baseUrl = `{{ prefix }}`;
+
+  async getAll(): Promise<{{ name }}[]> {
+    const dto = await lastValueFrom(
+      this.#http.get<{{ name }}ListResponseDto>(this.#baseUrl)
+    );
+    return mapListResponseToEntities(dto);
+  }
+
+  async getById(id: {{ name }}Id): Promise<{{ name }}> {
+    const dto = await lastValueFrom(
+      this.#http.get<{{ name }}ResponseDto>(`${this.#baseUrl}/${id}`)
+    );
+    return mapResponseToEntity(dto);
+  }
+
+  async create(entity: {{ name }}): Promise<{{ name }}> {
+    const body = mapEntityToRequest(entity);
+    const dto = await lastValueFrom(
+      this.#http.post<{{ name }}ResponseDto>(this.#baseUrl, body)
+    );
+    return mapResponseToEntity(dto);
+  }
+
+  async update(entity: {{ name }}): Promise<{{ name }}> {
+    const body = mapEntityToRequest(entity);
+    const dto = await lastValueFrom(
+      this.#http.put<{{ name }}ResponseDto>(`${this.#baseUrl}/${entity.id}`, body)
+    );
+    return mapResponseToEntity(dto);
+  }
+
+  async delete(id: {{ name }}Id): Promise<void> {
+    await lastValueFrom(
+      this.#http.delete<void>(`${this.#baseUrl}/${id}`)
+    );
+  }
+}

@@ -159,6 +159,6 @@ fn package_manager_label(pm: PackageManager) -> &'static str {
 fn architecture_label(profile: ArchitectureProfile) -> &'static str {
     match profile {
         ArchitectureProfile::Clean => "clean",
-        ArchitectureProfile::Cdp => "cdp",
+        ArchitectureProfile::Ddd => "ddd",
     }
 }

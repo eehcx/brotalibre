@@ -266,6 +266,20 @@ mod tests {
             Ok(())
         }
 
+        fn apply_feature_template(
+            &self,
+            _project_dir: &Path,
+            _architecture: ArchitectureProfile,
+            _name: &str,
+            _prefix: &str,
+            _fields: &[String],
+        ) -> Result<()> {
+            self.calls
+                .borrow_mut()
+                .push("apply_feature_template".to_string());
+            Ok(())
+        }
+
         fn apply_ui_integration(
             &self,
             _project_dir: &Path,

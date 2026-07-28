@@ -1,0 +1,7 @@
+export interface {{ name }}RequestDto {
+{% for field in fields %}
+{% if field.name != 'id' and field.name != 'createdAt' and field.name != 'updatedAt' %}
+  {{ field.name }}?: {{ field.type }};
+{% endif %}
+{% endfor %}
+}

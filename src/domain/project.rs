@@ -18,7 +18,7 @@ pub enum PackageManager {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ArchitectureProfile {
     Clean,
-    Cdp,
+    Ddd,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -41,4 +41,13 @@ pub struct NewProjectRequest {
     pub skip_install: bool,
     pub skip_git: bool,
     pub yes: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct GenerateFeatureRequest {
+    pub project_dir: String,
+    pub name: String,
+    pub architecture: ArchitectureProfile,
+    pub prefix: String,
+    pub fields: Vec<String>,
 }
