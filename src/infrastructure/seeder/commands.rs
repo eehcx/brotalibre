@@ -5,7 +5,7 @@ use std::process::Command;
 use anyhow::{Context, Result, bail};
 use serde_json::Value;
 
-use crate::domain::project::PackageManager;
+use crate::domain::project::{AstroResolvedOptions, DocsEngine, PackageManager};
 
 pub trait CommandRunner: Send + Sync {
     fn run(&mut self, program: &str, args: &[String], cwd: Option<&Path>) -> Result<()>;
@@ -59,6 +59,20 @@ pub(crate) fn ensure_required_tools(
     Ok(())
 }
 
+pub(crate) fn ensure_astro_required_tools(
+    runner: &mut dyn CommandRunner,
+    package_manager: PackageManager,
+) -> Result<()> {
+    for tool in ["node", package_manager_cli_name(package_manager)] {
+        let args = vec!["--version".to_string()];
+        runner
+            .run(tool, &args, None)
+            .with_context(|| format!("`{tool}` is required. Install it and retry."))?;
+    }
+
+    Ok(())
+}
+
 pub(crate) fn scaffold_angular_project(
     runner: &mut dyn CommandRunner,
     project_name: &str,
@@ -92,6 +106,73 @@ pub(crate) fn scaffold_angular_project(
     }
 
     Ok(())
+}
+
+pub(crate) fn scaffold_astro_project(
+    runner: &mut dyn CommandRunner,
+    project_name: &str,
+    options: &AstroResolvedOptions,
+) -> Result<()> {
+    let template = match options.docs_engine {
+        DocsEngine::Starlight => "starlight",
+        DocsEngine::Native => "minimal",
+    };
+    let (program, mut args) = match options.package_manager {
+        PackageManager::Npm => (
+            "npm",
+            vec![
+                "create",
+                "astro@latest",
+                "--",
+                project_name,
+                "--template",
+                template,
+                "--yes",
+            ],
+        ),
+        PackageManager::Pnpm => (
+            "pnpm",
+            vec![
+                "create",
+                "astro",
+                project_name,
+                "--template",
+                template,
+                "--yes",
+            ],
+        ),
+        PackageManager::Yarn => (
+            "yarn",
+            vec![
+                "create",
+                "astro",
+                project_name,
+                "--template",
+                template,
+                "--yes",
+            ],
+        ),
+        PackageManager::Bun => (
+            "bun",
+            vec![
+                "create",
+                "astro",
+                project_name,
+                "--template",
+                template,
+                "--yes",
+            ],
+        ),
+    };
+    if options.skip_install {
+        args.push("--no-install");
+    }
+    if options.skip_git {
+        args.push("--no-git");
+    }
+    let args = args.drain(..).map(String::from).collect::<Vec<_>>();
+
+    runner.run(program, &args, None)
 }
 
 pub(crate) fn package_manager_cli_name(package_manager: PackageManager) -> &'static str {
@@ -192,7 +273,9 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
-    use crate::domain::project::{ArchitectureProfile, ResolvedOptions, UiChoice};
+    use crate::domain::project::{
+        ArchitectureProfile, AstroResolvedOptions, ResolvedOptions, UiChoice,
+    };
     use crate::domain::styles_choice::StylesChoice;
 
     #[derive(Default)]
@@ -240,6 +323,74 @@ mod tests {
         assert!(args.contains(&"--ssr=false".to_string()));
         assert!(args.contains(&"--package-manager=pnpm".to_string()));
         assert!(args.contains(&"--skip-install".to_string()));
+    }
+
+    #[test]
+    fn scaffold_astro_starlight_uses_astro_template() {
+        let mut runner = FakeRunner::default();
+
+        scaffold_astro_project(
+            &mut runner,
+            "docs-site",
+            &AstroResolvedOptions {
+                docs_engine: DocsEngine::Starlight,
+                package_manager: PackageManager::Npm,
+                locales: vec!["en".to_string()],
+                skip_install: true,
+                skip_git: false,
+            },
+        )
+        .unwrap();
+
+        let (program, args, cwd) = &runner.calls[0];
+        assert_eq!(program, "npm");
+        assert_eq!(cwd, &None);
+        assert_eq!(
+            args,
+            &[
+                "create",
+                "astro@latest",
+                "--",
+                "docs-site",
+                "--template",
+                "starlight",
+                "--yes",
+                "--no-install",
+            ]
+        );
+    }
+
+    #[test]
+    fn scaffold_astro_native_uses_minimal_template_for_selected_manager() {
+        let mut runner = FakeRunner::default();
+
+        scaffold_astro_project(
+            &mut runner,
+            "docs-site",
+            &AstroResolvedOptions {
+                docs_engine: DocsEngine::Native,
+                package_manager: PackageManager::Pnpm,
+                locales: vec!["en".to_string()],
+                skip_install: false,
+                skip_git: true,
+            },
+        )
+        .unwrap();
+
+        let (program, args, _) = &runner.calls[0];
+        assert_eq!(program, "pnpm");
+        assert_eq!(
+            args,
+            &[
+                "create",
+                "astro",
+                "docs-site",
+                "--template",
+                "minimal",
+                "--yes",
+                "--no-git",
+            ]
+        );
     }
 
     #[test]

@@ -1,0 +1,21 @@
+import { defineConfig } from 'astro/config';
+import starlight from '@astrojs/starlight';
+
+export default defineConfig({
+  integrations: [
+    starlight({
+      title: '{{ project_name }}',
+      defaultLocale: 'root',
+      locales: {
+        root: {
+          label: '{{ locales[0].label }}',
+          lang: '{{ locales[0].lang }}',
+        },
+{% for locale in locales %}{% if not loop.first %}        '{{ locale.code }}': {
+          label: '{{ locale.label }}',
+          lang: '{{ locale.lang }}',
+        },
+{% endif %}{% endfor %}      },
+    }),
+  ],
+});
