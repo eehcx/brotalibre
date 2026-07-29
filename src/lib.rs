@@ -25,15 +25,6 @@ const BANNER: &str = r#"
     BrotaLibre - Grow scalable frontends from solid foundations.
 "#;
 
-const BANNER: &str = r#"
-        _   __      _____               __
-       / | / /___ _/ ___/___  ___  ____/ /
-      /  |/ / __ `/\__ \/ _ \/ _ \/ __  /
-     / /|  / /_/ /___/ /  __/  __/ /_/ /
-    /_/ |_/\__, //____/\___/\___/\__,_/
-          /____/
-"#;
-
 pub fn run() -> Result<()> {
     println!("{}", style(BANNER).blue());
 
