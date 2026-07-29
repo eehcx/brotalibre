@@ -1,5 +1,8 @@
 # brotalibre
 
+[![Stars](https://img.shields.io/github/stars/eehcx/brotalibre?logo=github&style=flat)](https://github.com/eehcx/brotalibre)
+
+
 Scaffold production-ready Angular v22 projects with Clean Architecture or DDD vertical slicing, and generate features via `brota generate feature`.
 
 ```bash

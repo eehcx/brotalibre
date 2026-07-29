@@ -35,9 +35,11 @@ pub fn run() -> Result<()> {
             let env = SystemEnvironment;
             let ui_selector = DialoguerUiSelector;
             let seeder = SystemSeeder;
+            let astro_seeder = SystemSeeder;
             let reporter = ConsoleProgressReporter::default();
 
-            let use_case = NewProjectUseCase::new(&env, &ui_selector, &seeder, &reporter);
+            let use_case =
+                NewProjectUseCase::new(&env, &ui_selector, &seeder, &astro_seeder, &reporter);
             use_case.execute(request)
         }
         interfaces::cli::AppCommand::GenerateFeature(request) => {

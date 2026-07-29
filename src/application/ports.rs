@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 
 use crate::domain::project::ArchitectureProfile;
+use crate::domain::project::DocsEngine;
 use crate::domain::project::PackageManager;
 use crate::domain::project::ResolvedOptions;
 use crate::domain::project::UiChoice;
@@ -49,6 +50,40 @@ pub trait Seeder {
         project_dir: &Path,
         ui: UiChoice,
         package_manager: PackageManager,
+    ) -> Result<()>;
+}
+
+/// Seeder port for the Astro docs i18n flow.
+///
+/// Kept as a separate trait from `Seeder` because the Angular and Astro
+/// flows are orthogonal (they share neither the scaffolding command nor
+/// the post-scaffold template application), so the Angular `Seeder` should
+/// not have to know about Astro and vice versa. `SystemSeeder` implements
+/// both; tests inject the one they need.
+pub trait AstroSeeder {
+    /// Ensure the tools required to scaffold an Astro project are available
+    /// (node, the chosen package manager, npm/npx for `npm create astro`).
+    fn ensure_astro_tools(&self, package_manager: PackageManager) -> Result<()>;
+
+    /// Scaffold a fresh Astro project at `project_name` using the selected
+    /// docs engine. Mirrors `scaffold_angular_project` but shells out to
+    /// `npm create starlight@latest` / `npm create astro@latest`.
+    fn scaffold_astro_project(
+        &self,
+        project_name: &str,
+        docs_engine: DocsEngine,
+        package_manager: PackageManager,
+    ) -> Result<()>;
+
+    /// Apply the Astro docs templates (config + per-locale content + i18n UI
+    /// strings for the native engine) on top of the freshly scaffolded
+    /// project at `project_dir`.
+    fn apply_astro_template(
+        &self,
+        project_dir: &Path,
+        docs_engine: DocsEngine,
+        project_name: &str,
+        locales: &[String],
     ) -> Result<()>;
 }
 

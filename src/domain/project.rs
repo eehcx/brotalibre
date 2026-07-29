@@ -56,6 +56,24 @@ pub struct ResolvedOptions {
     pub skip_git: bool,
 }
 
+/// Resolved options for an Astro docs project.
+///
+/// This is the Astro counterpart of `ResolvedOptions`: the two flows are
+/// orthogonal and share no fields beyond the package manager and the
+/// `skip_install`/`skip_git` flags, so a dedicated type keeps each
+/// framework's contract narrow and explicit.
+#[derive(Debug, Clone)]
+pub struct AstroResolvedOptions {
+    pub docs_engine: DocsEngine,
+    pub package_manager: PackageManager,
+    /// Locales for i18n, e.g. `["en", "es"]`. The first entry is the
+    /// default locale. Always non-empty after resolution (`["en"]` if the
+    /// user did not pass `--i18n`).
+    pub locales: Vec<String>,
+    pub skip_install: bool,
+    pub skip_git: bool,
+}
+
 #[derive(Debug, Clone)]
 pub struct NewProjectRequest {
     pub project_name: String,
@@ -68,15 +86,12 @@ pub struct NewProjectRequest {
     pub yes: bool,
     /// Target framework. When `None` it resolves to `Framework::Angular`
     /// (the historical behavior) unless `--yes` is used.
-    #[allow(dead_code)]
     pub framework: Option<Framework>,
     /// Docs engine for Astro projects. Ignored when `framework` is Angular.
     /// When `None` it resolves to `DocsEngine::Starlight`.
-    #[allow(dead_code)]
     pub docs_engine: Option<DocsEngine>,
     /// Locales for Astro docs i18n, e.g. `["en", "es"]`. The first entry is
     /// the default locale. Ignored when `framework` is Angular.
-    #[allow(dead_code)]
     pub locales: Vec<String>,
 }
 

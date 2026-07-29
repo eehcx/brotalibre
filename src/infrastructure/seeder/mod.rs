@@ -1,14 +1,16 @@
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use serde_json::json;
 
 pub(crate) mod commands;
 pub(crate) mod templates;
 pub(crate) mod ui_integration;
 
+use crate::application::ports::AstroSeeder;
 use crate::application::ports::Seeder;
 use crate::domain::project::ArchitectureProfile;
+use crate::domain::project::DocsEngine;
 use crate::domain::project::PackageManager;
 use crate::domain::project::ResolvedOptions;
 use crate::domain::project::UiChoice;
@@ -119,6 +121,34 @@ impl Seeder for SystemSeeder {
     ) -> Result<()> {
         let mut runner = SystemCommandRunner;
         apply_ui_integration(&mut runner, project_dir, ui, package_manager)
+    }
+}
+
+impl AstroSeeder for SystemSeeder {
+    fn ensure_astro_tools(&self, _package_manager: PackageManager) -> Result<()> {
+        // TODO(commit 3): check node + npm/npx for `npm create astro`.
+        Ok(())
+    }
+
+    fn scaffold_astro_project(
+        &self,
+        _project_name: &str,
+        _docs_engine: DocsEngine,
+        _package_manager: PackageManager,
+    ) -> Result<()> {
+        // TODO(commit 3): shell out to `npm create starlight@latest` / `npm create astro@latest`.
+        bail!("Astro scaffolding is not implemented yet")
+    }
+
+    fn apply_astro_template(
+        &self,
+        _project_dir: &Path,
+        _docs_engine: DocsEngine,
+        _project_name: &str,
+        _locales: &[String],
+    ) -> Result<()> {
+        // TODO(commit 3): render per-locale .j2 templates from templates/astro.
+        bail!("Astro template application is not implemented yet")
     }
 }
 

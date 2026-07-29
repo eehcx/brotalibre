@@ -1,10 +1,14 @@
 use anyhow::{Result, bail};
 
+use crate::application::ports::AstroSeeder;
 use crate::application::ports::Environment;
 use crate::application::ports::ProgressReporter;
 use crate::application::ports::Seeder;
 use crate::application::ports::UiSelector;
 use crate::domain::project::ArchitectureProfile;
+use crate::domain::project::AstroResolvedOptions;
+use crate::domain::project::DocsEngine;
+use crate::domain::project::Framework;
 use crate::domain::project::NewProjectRequest;
 use crate::domain::project::PackageManager;
 use crate::domain::project::ResolvedOptions;
@@ -15,6 +19,7 @@ pub struct NewProjectUseCase<'a> {
     env: &'a dyn Environment,
     ui_selector: &'a dyn UiSelector,
     seeder: &'a dyn Seeder,
+    astro_seeder: &'a dyn AstroSeeder,
     reporter: &'a dyn ProgressReporter,
 }
 
@@ -23,18 +28,29 @@ impl<'a> NewProjectUseCase<'a> {
         env: &'a dyn Environment,
         ui_selector: &'a dyn UiSelector,
         seeder: &'a dyn Seeder,
+        astro_seeder: &'a dyn AstroSeeder,
         reporter: &'a dyn ProgressReporter,
     ) -> Self {
         Self {
             env,
             ui_selector,
             seeder,
+            astro_seeder,
             reporter,
         }
     }
 
     pub fn execute(&self, request: NewProjectRequest) -> Result<()> {
-        let options = self.resolve_options(&request)?;
+        let framework = self.resolve_framework(&request);
+
+        match framework {
+            Framework::Astro => self.execute_astro(&request),
+            Framework::Angular => self.execute_angular(&request),
+        }
+    }
+
+    fn execute_angular(&self, request: &NewProjectRequest) -> Result<()> {
+        let options = self.resolve_angular_options(request)?;
 
         if !request.yes && !self.env.is_ci() && self.env.is_interactive_terminal() {
             //self.reporter.show_banner();
@@ -131,7 +147,94 @@ impl<'a> NewProjectUseCase<'a> {
         Ok(())
     }
 
-    fn resolve_options(&self, request: &NewProjectRequest) -> Result<ResolvedOptions> {
+    fn execute_astro(&self, request: &NewProjectRequest) -> Result<()> {
+        let options = self.resolve_astro_options(request)?;
+
+        self.reporter
+            .stage_start("preflight", "checking required tools");
+        if let Err(err) = self
+            .astro_seeder
+            .ensure_astro_tools(options.package_manager)
+        {
+            self.reporter
+                .stage_error("preflight", "required tool check failed");
+            return Err(err);
+        }
+        self.reporter
+            .stage_ok("preflight", "required tools look good");
+
+        if self.env.project_exists(&request.project_name) {
+            bail!(
+                "project directory `{}` already exists. Choose a different project name.",
+                request.project_name
+            );
+        }
+
+        let engine_label = match options.docs_engine {
+            DocsEngine::Starlight => "Starlight",
+            DocsEngine::Native => "Astro native",
+        };
+
+        self.reporter
+            .stage_start("scaffold", &format!("creating {engine_label} project"));
+        if let Err(err) = self.astro_seeder.scaffold_astro_project(
+            &request.project_name,
+            options.docs_engine,
+            options.package_manager,
+        ) {
+            self.reporter
+                .stage_error("scaffold", "Astro scaffolding failed");
+            return Err(err);
+        }
+        self.reporter
+            .stage_ok("scaffold", &format!("{engine_label} project created"));
+
+        let absolute_project_dir = self.env.current_dir()?.join(&request.project_name);
+
+        self.reporter.stage_start(
+            "template",
+            &format!("applying {engine_label} i18n template"),
+        );
+        if let Err(err) = self.astro_seeder.apply_astro_template(
+            &absolute_project_dir,
+            options.docs_engine,
+            &request.project_name,
+            &options.locales,
+        ) {
+            self.reporter
+                .stage_error("template", "Astro template setup failed");
+            return Err(err);
+        }
+        self.reporter.stage_ok("template", "i18n template applied");
+
+        // Reuse the Angular summary struct for the final report: it only
+        // needs project name + dir + package manager + skip flags, and the
+        // reporter output is generic enough. The ui/styles/architecture
+        // fields are Angular-specific and left at their defaults here; a
+        // dedicated Astro summary can be introduced if the reporter needs
+        // to surface locales/engine.
+        let summary_options = ResolvedOptions {
+            ui: UiChoice::None,
+            styles: StylesChoice::Css,
+            package_manager: options.package_manager,
+            architecture: ArchitectureProfile::Clean,
+            skip_install: options.skip_install,
+            skip_git: options.skip_git,
+        };
+        self.reporter.summary(
+            &request.project_name,
+            &absolute_project_dir,
+            summary_options,
+        );
+
+        Ok(())
+    }
+
+    fn resolve_framework(&self, request: &NewProjectRequest) -> Framework {
+        request.framework.unwrap_or_default()
+    }
+
+    fn resolve_angular_options(&self, request: &NewProjectRequest) -> Result<ResolvedOptions> {
         let package_manager = if let Some(value) = request.package_manager {
             value
         } else if request.yes {
@@ -180,6 +283,34 @@ impl<'a> NewProjectUseCase<'a> {
             skip_git: request.skip_git,
         })
     }
+
+    fn resolve_astro_options(&self, request: &NewProjectRequest) -> Result<AstroResolvedOptions> {
+        let package_manager = if let Some(value) = request.package_manager {
+            value
+        } else if request.yes {
+            PackageManager::Npm
+        } else {
+            self.ui_selector.select_package_manager()?
+        };
+
+        let docs_engine = request.docs_engine.unwrap_or_default();
+
+        // Locales: explicit CLI list wins; otherwise default to a single
+        // English locale so a `--yes` scaffold produces a working site.
+        let locales = if request.locales.is_empty() {
+            vec!["en".to_string()]
+        } else {
+            request.locales.clone()
+        };
+
+        Ok(AstroResolvedOptions {
+            docs_engine,
+            package_manager,
+            locales,
+            skip_install: request.skip_install,
+            skip_git: request.skip_git,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -189,10 +320,12 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
+    use crate::application::ports::AstroSeeder;
     use crate::application::ports::Environment;
     use crate::application::ports::ProgressReporter;
     use crate::application::ports::Seeder;
     use crate::application::ports::UiSelector;
+    use crate::domain::project::DocsEngine;
     use crate::domain::project::NewProjectRequest;
     use crate::domain::project::PackageManager;
 
@@ -309,6 +442,49 @@ mod tests {
     }
 
     #[derive(Default)]
+    struct FakeAstroSeeder {
+        calls: RefCell<Vec<String>>,
+    }
+
+    impl AstroSeeder for FakeAstroSeeder {
+        fn ensure_astro_tools(&self, _package_manager: PackageManager) -> Result<()> {
+            self.calls
+                .borrow_mut()
+                .push("ensure_astro_tools".to_string());
+            Ok(())
+        }
+
+        fn scaffold_astro_project(
+            &self,
+            project_name: &str,
+            docs_engine: DocsEngine,
+            _package_manager: PackageManager,
+        ) -> Result<()> {
+            self.calls.borrow_mut().push(format!(
+                "scaffold_astro_project:{}:{:?}",
+                project_name, docs_engine
+            ));
+            Ok(())
+        }
+
+        fn apply_astro_template(
+            &self,
+            _project_dir: &Path,
+            docs_engine: DocsEngine,
+            project_name: &str,
+            locales: &[String],
+        ) -> Result<()> {
+            self.calls.borrow_mut().push(format!(
+                "apply_astro_template:{:?}:{}:{}",
+                docs_engine,
+                project_name,
+                locales.join(",")
+            ));
+            Ok(())
+        }
+    }
+
+    #[derive(Default)]
     struct FakeReporter;
 
     impl ProgressReporter for FakeReporter {
@@ -319,8 +495,29 @@ mod tests {
         fn summary(&self, _project_name: &str, _project_dir: &Path, _options: ResolvedOptions) {}
     }
 
+    fn make_request(
+        project_name: &str,
+        framework: Option<Framework>,
+        docs_engine: Option<DocsEngine>,
+        locales: Vec<String>,
+    ) -> NewProjectRequest {
+        NewProjectRequest {
+            project_name: project_name.to_string(),
+            ui: None,
+            styles: None,
+            package_manager: Some(PackageManager::Npm),
+            architecture: Some(ArchitectureProfile::Clean),
+            skip_install: true,
+            skip_git: false,
+            yes: true,
+            framework,
+            docs_engine,
+            locales,
+        }
+    }
+
     #[test]
-    fn execute_runs_expected_flow() {
+    fn execute_runs_expected_angular_flow() {
         let env = FakeEnvironment {
             exists: false,
             cwd: PathBuf::from("/tmp"),
@@ -330,23 +527,13 @@ mod tests {
             styles: StylesChoice::Css,
         };
         let seeder = FakeSeeder::default();
+        let astro_seeder = FakeAstroSeeder::default();
         let reporter = FakeReporter;
-        let use_case = NewProjectUseCase::new(&env, &ui_selector, &seeder, &reporter);
+        let use_case =
+            NewProjectUseCase::new(&env, &ui_selector, &seeder, &astro_seeder, &reporter);
 
         use_case
-            .execute(NewProjectRequest {
-                project_name: "demo-app".to_string(),
-                ui: None,
-                styles: None,
-                package_manager: Some(PackageManager::Npm),
-                architecture: Some(ArchitectureProfile::Clean),
-                skip_install: true,
-                skip_git: false,
-                yes: true,
-                framework: None,
-                docs_engine: None,
-                locales: vec![],
-            })
+            .execute(make_request("demo-app", None, None, vec![]))
             .unwrap();
 
         assert_eq!(
@@ -358,6 +545,121 @@ mod tests {
                 "apply_feature_template",
                 "apply_ui_integration"
             ]
+        );
+        // The Angular flow must never touch the Astro seeder.
+        assert!(astro_seeder.calls.borrow().is_empty());
+    }
+
+    #[test]
+    fn execute_astro_starlight_with_default_locale() {
+        let env = FakeEnvironment {
+            exists: false,
+            cwd: PathBuf::from("/tmp"),
+        };
+        let ui_selector = FakeUiSelector {
+            ui: UiChoice::None,
+            styles: StylesChoice::Css,
+        };
+        let seeder = FakeSeeder::default();
+        let astro_seeder = FakeAstroSeeder::default();
+        let reporter = FakeReporter;
+        let use_case =
+            NewProjectUseCase::new(&env, &ui_selector, &seeder, &astro_seeder, &reporter);
+
+        use_case
+            .execute(make_request(
+                "my-docs",
+                Some(Framework::Astro),
+                Some(DocsEngine::Starlight),
+                vec![],
+            ))
+            .unwrap();
+
+        let calls = astro_seeder.calls.borrow().clone();
+        assert_eq!(
+            calls,
+            vec![
+                "ensure_astro_tools".to_string(),
+                "scaffold_astro_project:my-docs:Starlight".to_string(),
+                "apply_astro_template:Starlight:my-docs:en".to_string(),
+            ]
+        );
+        // The Astro flow must never touch the Angular seeder.
+        assert!(seeder.calls.borrow().is_empty());
+    }
+
+    #[test]
+    fn execute_astro_native_with_explicit_locales() {
+        let env = FakeEnvironment {
+            exists: false,
+            cwd: PathBuf::from("/tmp"),
+        };
+        let ui_selector = FakeUiSelector {
+            ui: UiChoice::None,
+            styles: StylesChoice::Css,
+        };
+        let seeder = FakeSeeder::default();
+        let astro_seeder = FakeAstroSeeder::default();
+        let reporter = FakeReporter;
+        let use_case =
+            NewProjectUseCase::new(&env, &ui_selector, &seeder, &astro_seeder, &reporter);
+
+        use_case
+            .execute(make_request(
+                "docs-site",
+                Some(Framework::Astro),
+                Some(DocsEngine::Native),
+                vec!["en".to_string(), "es".to_string()],
+            ))
+            .unwrap();
+
+        let calls = astro_seeder.calls.borrow().clone();
+        assert_eq!(
+            calls,
+            vec![
+                "ensure_astro_tools".to_string(),
+                "scaffold_astro_project:docs-site:Native".to_string(),
+                "apply_astro_template:Native:docs-site:en,es".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn execute_astro_defaults_engine_to_starlight_when_unspecified() {
+        let env = FakeEnvironment {
+            exists: false,
+            cwd: PathBuf::from("/tmp"),
+        };
+        let ui_selector = FakeUiSelector {
+            ui: UiChoice::None,
+            styles: StylesChoice::Css,
+        };
+        let seeder = FakeSeeder::default();
+        let astro_seeder = FakeAstroSeeder::default();
+        let reporter = FakeReporter;
+        let use_case =
+            NewProjectUseCase::new(&env, &ui_selector, &seeder, &astro_seeder, &reporter);
+
+        use_case
+            .execute(make_request(
+                "fallback-docs",
+                Some(Framework::Astro),
+                None,
+                vec![],
+            ))
+            .unwrap();
+
+        // Engine falls back to Starlight; locale falls back to "en".
+        let calls = astro_seeder.calls.borrow().clone();
+        assert!(
+            calls
+                .iter()
+                .any(|c| c == "scaffold_astro_project:fallback-docs:Starlight")
+        );
+        assert!(
+            calls
+                .iter()
+                .any(|c| c == "apply_astro_template:Starlight:fallback-docs:en")
         );
     }
 }
