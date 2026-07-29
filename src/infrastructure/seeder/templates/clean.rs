@@ -401,13 +401,14 @@ mod tests {
     }
 
     #[test]
-    fn clean_feature_fails_without_template_dir() {
+    fn clean_feature_uses_embedded_templates_without_template_dir() {
         let tmp = tempdir().unwrap();
         let app_dir = tmp.path().join("src/app");
         create_app_dir(&app_dir);
 
         let bad_base = tmp.path().join("no-templates");
-        let result = apply_clean_feature_template(&bad_base, &app_dir, "user", "api", &[]);
-        assert!(result.is_err());
+        apply_clean_feature_template(&bad_base, &app_dir, "user", "api", &[]).unwrap();
+
+        assert!(app_dir.join("domain/user.entity.ts").exists());
     }
 }

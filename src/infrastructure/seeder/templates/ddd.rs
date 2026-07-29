@@ -433,7 +433,7 @@ mod tests {
     }
 
     #[test]
-    fn ddd_feature_fails_without_template_dir() {
+    fn ddd_feature_uses_embedded_templates_without_template_dir() {
         let tmp = tempdir().unwrap();
         let project_dir = tmp.path().join("demo");
         let app_dir = project_dir.join("src/app");
@@ -447,8 +447,9 @@ mod tests {
         .unwrap();
 
         let bad_base = tmp.path().join("no-templates");
-        let result =
-            apply_ddd_feature_template(&bad_base, &app_dir.join("features"), "user", "api", &[]);
-        assert!(result.is_err());
+        apply_ddd_feature_template(&bad_base, &app_dir.join("features"), "user", "api", &[])
+            .unwrap();
+
+        assert!(app_dir.join("features/user/domain/user.entity.ts").exists());
     }
 }

@@ -17,6 +17,17 @@ brota generate feature user --architecture clean --fields name:string,email:stri
 - **CSS Frameworks** — TailwindCSS v4 or none
 - **Zero config** — get a working Angular v22 project in seconds
 
+## Install
+
+```bash
+cargo install --locked brotalibre
+sudo apt install ./brotalibre_<version>-1_amd64.deb
+sudo dnf install ./brotalibre-<version>-1.x86_64.rpm
+brew install eehcx/tap/brotalibre
+```
+
+See [`docs/distribution.md`](docs/distribution.md) for release channels, checksums, and Homebrew tap setup.
+
 ## Usage
 
 ### Create a new project

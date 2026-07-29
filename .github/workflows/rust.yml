@@ -5,6 +5,9 @@ on:
     branches: [master]
   pull_request:
 
+permissions:
+  contents: read
+
 concurrency:
   group: rust-ci-${{ github.ref }}
   cancel-in-progress: true
@@ -19,6 +22,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -44,6 +49,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -64,6 +71,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -73,3 +82,51 @@ jobs:
 
       - name: Build release
         run: cargo build --release
+
+  distribution:
+    name: Distribution contract (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Verify Cargo installation
+        shell: bash
+        run: |
+          set -euo pipefail
+          INSTALL_ROOT="${RUNNER_TEMP}/cargo-install"
+          PROJECT_DIR="${RUNNER_TEMP}/cargo-project"
+          cargo install --path . --root "${INSTALL_ROOT}" --locked
+          mkdir -p "${PROJECT_DIR}/src/app" "${RUNNER_TEMP}/cargo-cwd"
+          (
+            cd "${RUNNER_TEMP}/cargo-cwd"
+            "${INSTALL_ROOT}/bin/brota" generate feature cargo-install \
+              --architecture clean \
+              --project-dir "${PROJECT_DIR}"
+          )
+          test -f "${PROJECT_DIR}/src/app/domain/cargo-install.entity.ts"
+
+      - name: Verify release archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARCHIVE_ROOT="${RUNNER_TEMP}/release-archive"
+          PROJECT_DIR="${ARCHIVE_ROOT}/project"
+          cargo build --release
+          mkdir -p "${ARCHIVE_ROOT}/extracted" "${PROJECT_DIR}/src/app" "${ARCHIVE_ROOT}/cwd"
+          tar -czf "${ARCHIVE_ROOT}/brotalibre.tar.gz" \
+            -C target/release brota \
+            -C "${GITHUB_WORKSPACE}" templates
+          tar -xzf "${ARCHIVE_ROOT}/brotalibre.tar.gz" -C "${ARCHIVE_ROOT}/extracted"
+          (
+            cd "${ARCHIVE_ROOT}/cwd"
+            "${ARCHIVE_ROOT}/extracted/brota" generate feature archive-install \
+              --architecture clean \
+              --project-dir "${PROJECT_DIR}"
+          )
+          test -f "${PROJECT_DIR}/src/app/domain/archive-install.entity.ts"

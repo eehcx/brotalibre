@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 use serde_json::json;
@@ -37,9 +37,7 @@ impl Seeder for SystemSeeder {
         project_name: &str,
         styles: StylesChoice,
     ) -> Result<()> {
-        let template_base = std::env::current_dir()
-            .map(|p| p.join("templates").join("angular"))
-            .expect("Failed to get current directory");
+        let template_base = template_base()?;
 
         enable_strict_tsconfig(project_dir)?;
 
@@ -67,9 +65,7 @@ impl Seeder for SystemSeeder {
         prefix: &str,
         fields: &[String],
     ) -> Result<()> {
-        let template_base = std::env::current_dir()
-            .map(|p| p.join("templates").join("angular"))
-            .expect("Failed to get current directory");
+        let template_base = template_base()?;
 
         let fields_json: Vec<serde_json::Value> = fields
             .iter()
@@ -110,19 +106,32 @@ impl Seeder for SystemSeeder {
         ui: UiChoice,
         package_manager: PackageManager,
     ) -> Result<()> {
-        let template_base = std::env::current_dir()
-            .map(|p| p.join("templates").join("angular"))
-            .expect("Failed to get current directory");
-
         let mut runner = SystemCommandRunner;
-        apply_ui_integration(
-            &mut runner,
-            &template_base,
-            project_dir,
-            ui,
-            package_manager,
-        )
+        apply_ui_integration(&mut runner, project_dir, ui, package_manager)
     }
+}
+
+fn template_base() -> Result<PathBuf> {
+    let executable_dir = std::env::current_exe()
+        .ok()
+        .and_then(|path| path.parent().map(Path::to_path_buf));
+    let current_dir = std::env::current_dir().context("unable to resolve current directory")?;
+
+    Ok(resolve_template_base(
+        executable_dir.as_deref(),
+        &current_dir,
+    ))
+}
+
+fn resolve_template_base(executable_dir: Option<&Path>, current_dir: &Path) -> PathBuf {
+    if let Some(executable_dir) = executable_dir {
+        let bundled_templates = executable_dir.join("templates").join("angular");
+        if bundled_templates.is_dir() {
+            return bundled_templates;
+        }
+    }
+
+    current_dir.join("templates").join("angular")
 }
 
 fn strip_json_comments(input: &str) -> String {
@@ -157,10 +166,11 @@ fn enable_strict_tsconfig(project_dir: &Path) -> Result<()> {
             &clean[..clean.len().min(100)]
         )
     })?;
-    if let Some(opts) = json.get_mut("compilerOptions") {
-        if let Some(obj) = opts.as_object_mut() {
-            obj.insert("strict".to_string(), serde_json::Value::Bool(true));
-        }
+    if let Some(obj) = json
+        .get_mut("compilerOptions")
+        .and_then(serde_json::Value::as_object_mut)
+    {
+        obj.insert("strict".to_string(), serde_json::Value::Bool(true));
     }
     let out = serde_json::to_string_pretty(&json)?;
     std::fs::write(&tsconfig_path, &out)?;
@@ -176,13 +186,14 @@ fn add_ngrx_deps_to_package_json(project_dir: &Path) -> Result<()> {
     let mut json: serde_json::Value = serde_json::from_str(&content)
         .with_context(|| format!("failed to parse package.json at {}", pkg_path.display()))?;
 
-    if let Some(deps) = json.get_mut("dependencies") {
-        if let Some(obj) = deps.as_object_mut() {
-            obj.entry("@ngrx/signals".to_string())
-                .or_insert(serde_json::Value::String("^21.0.0".to_string()));
-            obj.entry("@ngrx/operators".to_string())
-                .or_insert(serde_json::Value::String("^21.0.0".to_string()));
-        }
+    if let Some(obj) = json
+        .get_mut("dependencies")
+        .and_then(serde_json::Value::as_object_mut)
+    {
+        obj.entry("@ngrx/signals".to_string())
+            .or_insert(serde_json::Value::String("^21.0.0".to_string()));
+        obj.entry("@ngrx/operators".to_string())
+            .or_insert(serde_json::Value::String("^21.0.0".to_string()));
     }
 
     // Add overrides to resolve peer dep conflict until ngrx v22 stable
@@ -205,6 +216,47 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
+
+    #[test]
+    fn template_base_prefers_templates_next_to_executable() {
+        let tmp = tempdir().unwrap();
+        let executable_dir = tmp.path().join("bin");
+        let current_dir = tmp.path().join("workspace");
+        let bundled_templates = executable_dir.join("templates/angular");
+
+        fs::create_dir_all(&bundled_templates).unwrap();
+        fs::create_dir_all(current_dir.join("templates/angular")).unwrap();
+
+        assert_eq!(
+            resolve_template_base(Some(&executable_dir), &current_dir),
+            bundled_templates
+        );
+    }
+
+    #[test]
+    fn template_base_falls_back_to_current_directory() {
+        let tmp = tempdir().unwrap();
+        let executable_dir = tmp.path().join("bin");
+        let current_dir = tmp.path().join("workspace");
+        let workspace_templates = current_dir.join("templates/angular");
+
+        fs::create_dir_all(&workspace_templates).unwrap();
+
+        assert_eq!(
+            resolve_template_base(Some(&executable_dir), &current_dir),
+            workspace_templates
+        );
+    }
+
+    #[test]
+    fn template_loader_uses_embedded_templates_when_filesystem_templates_are_missing() {
+        let tmp = tempdir().unwrap();
+        let missing_templates = tmp.path().join("missing-templates");
+        let loader = templates::TemplateLoader::new(&missing_templates).unwrap();
+
+        let rendered = loader.render("app/app.config.ts.j2", ()).unwrap();
+        assert!(rendered.contains("ApplicationConfig"));
+    }
 
     #[test]
     fn strip_json_comments_removes_block_comments() {
@@ -333,7 +385,7 @@ mod tests {
 
     #[test]
     fn parse_feature_fields_simple() {
-        let fields = vec!["name:string".to_string()];
+        let fields = ["name:string".to_string()];
         let result: Vec<serde_json::Value> = fields
             .iter()
             .map(|f| {
@@ -347,7 +399,7 @@ mod tests {
 
     #[test]
     fn parse_feature_fields_defaults_type_to_string() {
-        let fields = vec!["email".to_string()];
+        let fields = ["email".to_string()];
         let result: Vec<serde_json::Value> = fields
             .iter()
             .map(|f| {
@@ -361,7 +413,7 @@ mod tests {
 
     #[test]
     fn parse_feature_fields_multiple_fields() {
-        let fields = vec![
+        let fields = [
             "name:string".to_string(),
             "age:number".to_string(),
             "active:boolean".to_string(),

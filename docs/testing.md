@@ -189,7 +189,7 @@ ln -s "$PWD/templates" "$TMPDIR/templates"
 
 ### "Template not found: template XYZ does not exist"
 
-The `brota` binary finds templates relative to the current working directory (`cwd/templates/angular/...`). The script symlinks `templates/` into the tempdir and runs `brota` from there. If you invoke `brota` directly, run it from your repo root, or pass `--project-dir` and symlink/copy `templates/` next to your working directory.
+The `brota` binary first looks for `templates/angular/...` beside its executable, as provided by a release archive. For development it falls back to `cwd/templates/angular/...`. If neither location exists, it uses the templates embedded in the binary, which keeps `cargo install brotalibre` functional.
 
 ### "brota new command failed"
 

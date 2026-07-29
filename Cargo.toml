@@ -1,10 +1,11 @@
 [package]
 name = "brotalibre"
-version = "0.2.0"
+version = "0.2.2"
 edition = "2024"
 description = "Scaffold production-ready Angular projects with clean architecture and optional UI integrations"
-license = "GPL-3.0"
+license = "GPL-3.0-only"
 repository = "https://github.com/eehcx/brotalibre"
+homepage = "https://github.com/eehcx/brotalibre"
 readme = "README.md"
 keywords = ["angular", "cli", "scaffold", "clean-architecture"]
 categories = ["command-line-utilities", "development-tools"]
@@ -13,12 +14,26 @@ categories = ["command-line-utilities", "development-tools"]
 name = "brota"
 path = "src/main.rs"
 
+[package.metadata.deb]
+maintainer = "Enoc Emanuel <eehcx.contacto@gmail.com>"
+copyright = "2026 Enoc Emanuel"
+license-file = ["LICENSE", "0"]
+extended-description = "Scaffold production-ready Angular projects with Clean Architecture or DDD vertical slicing."
+section = "utility"
+priority = "optional"
+assets = [["target/release/brota", "usr/bin/", "755"]]
+
+[package.metadata.generate-rpm]
+release = "1"
+assets = [{ source = "target/release/brota", dest = "/usr/bin/brota", mode = "755" }]
+
 [dependencies]
 anyhow = "1.0"
 clap = { version = "4.5", features = ["derive"] }
 console = "0.15"
 dialoguer = "0.11"
 indicatif = "0.17"
+include_dir = "0.7.4"
 minijinja = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

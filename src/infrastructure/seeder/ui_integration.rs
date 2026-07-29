@@ -4,13 +4,12 @@ use anyhow::Result;
 
 use crate::domain::project::PackageManager;
 use crate::domain::project::UiChoice;
+use crate::infrastructure::seeder::CommandRunner;
 use crate::infrastructure::seeder::commands::add_styles_to_angular_json;
 use crate::infrastructure::seeder::commands::package_manager_install_command;
-use crate::infrastructure::seeder::CommandRunner;
 
 pub(crate) fn apply_ui_integration(
     runner: &mut dyn CommandRunner,
-    _template_base: &Path,
     project_dir: &Path,
     ui: UiChoice,
     package_manager: PackageManager,
