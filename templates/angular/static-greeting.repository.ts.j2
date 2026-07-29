@@ -1,0 +1,10 @@
+import { Injectable } from '@angular/core';
+import { Greeting } from '../../domain/entities/greeting.entity';
+import { GreetingRepository } from '../../domain/ports/greeting-repository.port';
+
+@Injectable()
+export class StaticGreetingRepository implements GreetingRepository {
+  getGreeting(): Greeting {
+    return { value: 'Angular project seeded with Clean Architecture' };
+  }
+}

@@ -1,0 +1,9 @@
+import { Injectable, inject } from '@angular/core';
+import { GetGreetingUseCase } from '../../application/use-cases/get-greeting.use-case';
+
+@Injectable({ providedIn: 'root' })
+export class HomeFacade {
+  private readonly getGreetingUseCase = inject(GetGreetingUseCase);
+
+  readonly message = this.getGreetingUseCase.execute();
+}

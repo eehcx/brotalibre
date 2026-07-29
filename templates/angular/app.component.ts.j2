@@ -1,0 +1,14 @@
+import { Component, inject } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
+import { HomeFacade } from './presentation/facades/home.facade';
+
+@Component({
+  selector: 'app-root',
+  imports: [RouterOutlet],
+  templateUrl: '{{ template_url }}',
+  styleUrl: '{{ style_url }}',
+})
+export class {{ component_class }} {
+  private readonly homeFacade = inject(HomeFacade);
+  readonly message = this.homeFacade.message;
+}

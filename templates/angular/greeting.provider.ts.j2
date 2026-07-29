@@ -1,0 +1,13 @@
+import { Provider } from '@angular/core';
+import { GREETING_REPOSITORY } from '../../domain/ports/greeting-repository.port';
+import { StaticGreetingRepository } from '../adapters/static-greeting.repository';
+
+export function provideGreetingRepository(): Provider[] {
+  return [
+    StaticGreetingRepository,
+    {
+      provide: GREETING_REPOSITORY,
+      useExisting: StaticGreetingRepository,
+    },
+  ];
+}

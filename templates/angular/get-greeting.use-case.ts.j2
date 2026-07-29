@@ -1,0 +1,17 @@
+import { Inject, Injectable } from '@angular/core';
+import {
+  GREETING_REPOSITORY,
+  GreetingRepository,
+} from '../../domain/ports/greeting-repository.port';
+
+@Injectable({ providedIn: 'root' })
+export class GetGreetingUseCase {
+  constructor(
+    @Inject(GREETING_REPOSITORY)
+    private readonly greetingRepository: GreetingRepository,
+  ) {}
+
+  execute(): string {
+    return this.greetingRepository.getGreeting().value;
+  }
+}
