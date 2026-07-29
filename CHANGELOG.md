@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/eehcx/brotalibre/compare/ngseed-v0.3.0...ngseed-v0.3.1) (2026-07-29)
+
+
+### Bug Fixes
+
+* **ci:** remove stale code from master/develop merge conflict ([#16](https://github.com/eehcx/brotalibre/issues/16)) ([8726b91](https://github.com/eehcx/brotalibre/commit/8726b91cea877495f4eb30a9ff9cb2cc4d60527e))
+
 ## [0.3.0](https://github.com/eehcx/brotalibre/compare/ngseed-v0.2.2...ngseed-v0.3.0) (2026-07-29)
 
 
