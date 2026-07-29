@@ -151,10 +151,33 @@ jobs:
           path: dist
           merge-multiple: true
 
+      - name: Prepend alpha disclaimer to release body
+        id: release_body
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release_please.outputs.tag_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${TAG##*-v}"
+          EXISTING="$(gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" --json body --jq '.body // empty')"
+          {
+            printf '> ⚠️ **Alpha software — not production-ready.**\n'
+            printf '> brotalibre %s is alpha-quality: features may change, break, or be incomplete. Do not use in production.\n' "${VERSION}"
+            printf '\n---\n\n'
+            printf '%s\n' "${EXISTING}"
+          } > /tmp/release-body.md
+          {
+            printf 'body<<RELEASE_BODY_EOF\n'
+            cat /tmp/release-body.md
+            printf 'RELEASE_BODY_EOF\n'
+          } >> "${GITHUB_OUTPUT}"
+
       - name: Publish release assets to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.release_please.outputs.tag_name }}
+          body: ${{ steps.release_body.outputs.body }}
           files: |
             dist/*.tar.gz
             dist/*.zip
