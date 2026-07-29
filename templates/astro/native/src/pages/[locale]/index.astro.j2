@@ -1,0 +1,21 @@
+---
+import DocLayout from '../../layouts/DocLayout.astro';
+
+const locales = [
+{% for entry in locales %}  { code: '{{ entry.code }}', label: '{{ entry.label }}' },
+{% endfor %}];
+
+export function getStaticPaths() {
+  return locales
+    .filter((entry) => entry.code !== '{{ default_locale }}')
+    .map((entry) => ({ params: { locale: entry.code } }));
+}
+
+const locale = Astro.params.locale ?? '{{ default_locale }}';
+const localeLabel = locales.find((entry) => entry.code === locale)?.label ?? 'Documentation';
+---
+
+<DocLayout title="{{ project_name }}" locale={locale} locales={locales}>
+  <h1>Welcome</h1>
+  <p>This is the {localeLabel} translation of the <strong>{{ project_name }}</strong> documentation.</p>
+</DocLayout>

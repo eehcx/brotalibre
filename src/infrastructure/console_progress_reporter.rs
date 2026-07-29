@@ -6,7 +6,10 @@ use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::application::ports::ProgressReporter;
-use crate::domain::project::{ArchitectureProfile, PackageManager, ResolvedOptions, UiChoice};
+use crate::domain::project::{
+    ArchitectureProfile, AstroResolvedOptions, DocsEngine, PackageManager, ResolvedOptions,
+    UiChoice,
+};
 use crate::domain::styles_choice::StylesChoice;
 
 pub struct ConsoleProgressReporter {
@@ -145,6 +148,58 @@ impl ProgressReporter for ConsoleProgressReporter {
         //println!("  {} start or ng serve (recommended)", package_manager_label(options.package_manager));
         //println!("  ng serve (recommended)");
     }
+
+    fn astro_summary(
+        &self,
+        project_name: &str,
+        project_dir: &Path,
+        options: &AstroResolvedOptions,
+    ) {
+        println!();
+        println!("{}", style("done").green().bold());
+        println!(
+            "{} {}",
+            style("project:").bold(),
+            style(project_name).cyan().bold()
+        );
+        println!("{} {}", style("path:").bold(), project_dir.display());
+        println!(
+            "{} {}",
+            style("docs engine:").bold(),
+            style(docs_engine_label(options.docs_engine)).yellow()
+        );
+        println!(
+            "{} {}",
+            style("locales:").bold(),
+            style(options.locales.join(", ")).yellow()
+        );
+        println!(
+            "{} {}",
+            style("package manager:").bold(),
+            style(package_manager_label(options.package_manager)).yellow()
+        );
+        println!(
+            "{} {}",
+            style("skip install:").bold(),
+            style(if options.skip_install { "yes" } else { "no" }).yellow()
+        );
+        println!(
+            "{} {}",
+            style("skip git:").bold(),
+            style(if options.skip_git { "yes" } else { "no" }).yellow()
+        );
+        println!();
+        println!("{}", style("next steps:").bold());
+        println!("  cd {}", project_name);
+        println!(
+            "  {} install",
+            package_manager_label(options.package_manager)
+        );
+        println!(
+            "  {} run dev",
+            package_manager_label(options.package_manager)
+        );
+    }
 }
 
 fn ui_label(ui: UiChoice) -> &'static str {
@@ -161,6 +216,13 @@ fn package_manager_label(pm: PackageManager) -> &'static str {
         PackageManager::Pnpm => "pnpm",
         PackageManager::Yarn => "yarn",
         PackageManager::Bun => "bun",
+    }
+}
+
+fn docs_engine_label(engine: DocsEngine) -> &'static str {
+    match engine {
+        DocsEngine::Starlight => "starlight",
+        DocsEngine::Native => "native",
     }
 }
 

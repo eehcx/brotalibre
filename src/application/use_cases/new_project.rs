@@ -41,7 +41,7 @@ impl<'a> NewProjectUseCase<'a> {
     }
 
     pub fn execute(&self, request: NewProjectRequest) -> Result<()> {
-        let framework = self.resolve_framework(&request);
+        let framework = self.resolve_framework(&request)?;
 
         match framework {
             Framework::Astro => self.execute_astro(&request),
@@ -177,11 +177,10 @@ impl<'a> NewProjectUseCase<'a> {
 
         self.reporter
             .stage_start("scaffold", &format!("creating {engine_label} project"));
-        if let Err(err) = self.astro_seeder.scaffold_astro_project(
-            &request.project_name,
-            options.docs_engine,
-            options.package_manager,
-        ) {
+        if let Err(err) = self
+            .astro_seeder
+            .scaffold_astro_project(&request.project_name, &options)
+        {
             self.reporter
                 .stage_error("scaffold", "Astro scaffolding failed");
             return Err(err);
@@ -207,31 +206,21 @@ impl<'a> NewProjectUseCase<'a> {
         }
         self.reporter.stage_ok("template", "i18n template applied");
 
-        // Reuse the Angular summary struct for the final report: it only
-        // needs project name + dir + package manager + skip flags, and the
-        // reporter output is generic enough. The ui/styles/architecture
-        // fields are Angular-specific and left at their defaults here; a
-        // dedicated Astro summary can be introduced if the reporter needs
-        // to surface locales/engine.
-        let summary_options = ResolvedOptions {
-            ui: UiChoice::None,
-            styles: StylesChoice::Css,
-            package_manager: options.package_manager,
-            architecture: ArchitectureProfile::Clean,
-            skip_install: options.skip_install,
-            skip_git: options.skip_git,
-        };
-        self.reporter.summary(
-            &request.project_name,
-            &absolute_project_dir,
-            summary_options,
-        );
+        self.reporter
+            .astro_summary(&request.project_name, &absolute_project_dir, &options);
 
         Ok(())
     }
 
-    fn resolve_framework(&self, request: &NewProjectRequest) -> Framework {
-        request.framework.unwrap_or_default()
+    fn resolve_framework(&self, request: &NewProjectRequest) -> Result<Framework> {
+        if let Some(framework) = request.framework {
+            return Ok(framework);
+        }
+        if request.yes || self.env.is_ci() || !self.env.is_interactive_terminal() {
+            Ok(Framework::Angular)
+        } else {
+            self.ui_selector.select_framework()
+        }
     }
 
     fn resolve_angular_options(&self, request: &NewProjectRequest) -> Result<ResolvedOptions> {
@@ -293,14 +282,22 @@ impl<'a> NewProjectUseCase<'a> {
             self.ui_selector.select_package_manager()?
         };
 
-        let docs_engine = request.docs_engine.unwrap_or_default();
+        let docs_engine = if let Some(docs_engine) = request.docs_engine {
+            docs_engine
+        } else if request.yes || self.env.is_ci() || !self.env.is_interactive_terminal() {
+            DocsEngine::Starlight
+        } else {
+            self.ui_selector.select_docs_engine()?
+        };
 
         // Locales: explicit CLI list wins; otherwise default to a single
         // English locale so a `--yes` scaffold produces a working site.
-        let locales = if request.locales.is_empty() {
+        let locales = if !request.locales.is_empty() {
+            request.locales.clone()
+        } else if request.yes || self.env.is_ci() || !self.env.is_interactive_terminal() {
             vec!["en".to_string()]
         } else {
-            request.locales.clone()
+            self.ui_selector.select_locales()?
         };
 
         Ok(AstroResolvedOptions {
@@ -330,11 +327,18 @@ mod tests {
     use crate::domain::project::PackageManager;
 
     struct FakeUiSelector {
+        framework: Framework,
         ui: UiChoice,
         styles: StylesChoice,
+        docs_engine: DocsEngine,
+        locales: Vec<String>,
     }
 
     impl UiSelector for FakeUiSelector {
+        fn select_framework(&self) -> Result<Framework> {
+            Ok(self.framework)
+        }
+
         fn select_ui(&self) -> Result<UiChoice> {
             Ok(self.ui)
         }
@@ -349,6 +353,14 @@ mod tests {
 
         fn select_architecture(&self) -> Result<ArchitectureProfile> {
             Ok(ArchitectureProfile::Clean)
+        }
+
+        fn select_docs_engine(&self) -> Result<DocsEngine> {
+            Ok(self.docs_engine)
+        }
+
+        fn select_locales(&self) -> Result<Vec<String>> {
+            Ok(self.locales.clone())
         }
     }
 
@@ -457,12 +469,11 @@ mod tests {
         fn scaffold_astro_project(
             &self,
             project_name: &str,
-            docs_engine: DocsEngine,
-            _package_manager: PackageManager,
+            options: &AstroResolvedOptions,
         ) -> Result<()> {
             self.calls.borrow_mut().push(format!(
                 "scaffold_astro_project:{}:{:?}",
-                project_name, docs_engine
+                project_name, options.docs_engine
             ));
             Ok(())
         }
@@ -493,6 +504,13 @@ mod tests {
         fn stage_ok(&self, _stage: &str, _message: &str) {}
         fn stage_error(&self, _stage: &str, _message: &str) {}
         fn summary(&self, _project_name: &str, _project_dir: &Path, _options: ResolvedOptions) {}
+        fn astro_summary(
+            &self,
+            _project_name: &str,
+            _project_dir: &Path,
+            _options: &AstroResolvedOptions,
+        ) {
+        }
     }
 
     fn make_request(
@@ -523,8 +541,11 @@ mod tests {
             cwd: PathBuf::from("/tmp"),
         };
         let ui_selector = FakeUiSelector {
+            framework: Framework::Angular,
             ui: UiChoice::None,
             styles: StylesChoice::Css,
+            docs_engine: DocsEngine::Starlight,
+            locales: vec!["en".to_string()],
         };
         let seeder = FakeSeeder::default();
         let astro_seeder = FakeAstroSeeder::default();
@@ -551,14 +572,63 @@ mod tests {
     }
 
     #[test]
+    fn interactive_framework_selection_enters_astro_docs_flow() {
+        let env = FakeEnvironment {
+            exists: false,
+            cwd: PathBuf::from("/tmp"),
+        };
+        let ui_selector = FakeUiSelector {
+            framework: Framework::Astro,
+            ui: UiChoice::None,
+            styles: StylesChoice::Css,
+            docs_engine: DocsEngine::Native,
+            locales: vec!["en".to_string(), "es".to_string()],
+        };
+        let seeder = FakeSeeder::default();
+        let astro_seeder = FakeAstroSeeder::default();
+        let reporter = FakeReporter;
+        let use_case =
+            NewProjectUseCase::new(&env, &ui_selector, &seeder, &astro_seeder, &reporter);
+
+        use_case
+            .execute(NewProjectRequest {
+                project_name: "interactive-docs".to_string(),
+                ui: None,
+                styles: None,
+                package_manager: None,
+                architecture: None,
+                skip_install: true,
+                skip_git: true,
+                yes: false,
+                framework: None,
+                docs_engine: None,
+                locales: vec![],
+            })
+            .unwrap();
+
+        assert_eq!(
+            astro_seeder.calls.borrow().clone(),
+            vec![
+                "ensure_astro_tools",
+                "scaffold_astro_project:interactive-docs:Native",
+                "apply_astro_template:Native:interactive-docs:en,es",
+            ]
+        );
+        assert!(seeder.calls.borrow().is_empty());
+    }
+
+    #[test]
     fn execute_astro_starlight_with_default_locale() {
         let env = FakeEnvironment {
             exists: false,
             cwd: PathBuf::from("/tmp"),
         };
         let ui_selector = FakeUiSelector {
+            framework: Framework::Astro,
             ui: UiChoice::None,
             styles: StylesChoice::Css,
+            docs_engine: DocsEngine::Starlight,
+            locales: vec!["en".to_string()],
         };
         let seeder = FakeSeeder::default();
         let astro_seeder = FakeAstroSeeder::default();
@@ -595,8 +665,11 @@ mod tests {
             cwd: PathBuf::from("/tmp"),
         };
         let ui_selector = FakeUiSelector {
+            framework: Framework::Astro,
             ui: UiChoice::None,
             styles: StylesChoice::Css,
+            docs_engine: DocsEngine::Native,
+            locales: vec!["en".to_string(), "es".to_string()],
         };
         let seeder = FakeSeeder::default();
         let astro_seeder = FakeAstroSeeder::default();
@@ -631,8 +704,11 @@ mod tests {
             cwd: PathBuf::from("/tmp"),
         };
         let ui_selector = FakeUiSelector {
+            framework: Framework::Astro,
             ui: UiChoice::None,
             styles: StylesChoice::Css,
+            docs_engine: DocsEngine::Starlight,
+            locales: vec!["en".to_string()],
         };
         let seeder = FakeSeeder::default();
         let astro_seeder = FakeAstroSeeder::default();

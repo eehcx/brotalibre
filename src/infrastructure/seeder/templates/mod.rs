@@ -13,6 +13,7 @@ use crate::domain::styles_choice::StylesChoice;
 use crate::infrastructure::seeder::commands::write_file;
 
 static ANGULAR_TEMPLATES: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/templates/angular");
+static ASTRO_TEMPLATES: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/templates/astro");
 
 pub struct TemplateLoader {
     env: Environment<'static>,
@@ -20,6 +21,14 @@ pub struct TemplateLoader {
 
 impl TemplateLoader {
     pub fn new(base_path: &Path) -> Result<Self> {
+        Self::with_embedded(base_path, &ANGULAR_TEMPLATES)
+    }
+
+    pub fn new_astro(base_path: &Path) -> Result<Self> {
+        Self::with_embedded(base_path, &ASTRO_TEMPLATES)
+    }
+
+    fn with_embedded(base_path: &Path, embedded: &'static Dir<'static>) -> Result<Self> {
         let mut env = Environment::new();
         let filesystem_loader = base_path
             .is_dir()
@@ -31,7 +40,7 @@ impl TemplateLoader {
                 return Ok(Some(source));
             }
 
-            Ok(ANGULAR_TEMPLATES
+            Ok(embedded
                 .get_file(name)
                 .and_then(|file| file.contents_utf8())
                 .map(str::to_owned))

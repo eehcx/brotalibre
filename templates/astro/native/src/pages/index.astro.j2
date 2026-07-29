@@ -1,0 +1,14 @@
+---
+import DocLayout from '../layouts/DocLayout.astro';
+import LocaleSwitcher from '../components/LocaleSwitcher.astro';
+
+const locales = [
+{% for locale in locales %}  { code: '{{ locale.code }}', label: '{{ locale.label }}' },
+{% endfor %}];
+---
+
+<DocLayout title="{{ project_name }}" locale="{{ locale }}" locales={locales}>
+  <h1>Welcome</h1>
+  <p>This is the {{ locale_label }} documentation site for <strong>{{ project_name }}</strong>.</p>
+  <p>Write your documentation in <code>src/content/</code> and add localized routes as the site grows.</p>
+</DocLayout>

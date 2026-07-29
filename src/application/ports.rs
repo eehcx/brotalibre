@@ -4,17 +4,22 @@ use std::path::PathBuf;
 use anyhow::Result;
 
 use crate::domain::project::ArchitectureProfile;
+use crate::domain::project::AstroResolvedOptions;
 use crate::domain::project::DocsEngine;
+use crate::domain::project::Framework;
 use crate::domain::project::PackageManager;
 use crate::domain::project::ResolvedOptions;
 use crate::domain::project::UiChoice;
 use crate::domain::styles_choice::StylesChoice;
 
 pub trait UiSelector {
+    fn select_framework(&self) -> Result<Framework>;
     fn select_ui(&self) -> Result<UiChoice>;
     fn select_styles(&self) -> Result<StylesChoice>;
     fn select_package_manager(&self) -> Result<PackageManager>;
     fn select_architecture(&self) -> Result<ArchitectureProfile>;
+    fn select_docs_engine(&self) -> Result<DocsEngine>;
+    fn select_locales(&self) -> Result<Vec<String>>;
 }
 
 pub trait Environment {
@@ -71,8 +76,7 @@ pub trait AstroSeeder {
     fn scaffold_astro_project(
         &self,
         project_name: &str,
-        docs_engine: DocsEngine,
-        package_manager: PackageManager,
+        options: &AstroResolvedOptions,
     ) -> Result<()>;
 
     /// Apply the Astro docs templates (config + per-locale content + i18n UI
@@ -93,4 +97,5 @@ pub trait ProgressReporter {
     fn stage_ok(&self, stage: &str, message: &str);
     fn stage_error(&self, stage: &str, message: &str);
     fn summary(&self, project_name: &str, project_dir: &Path, options: ResolvedOptions);
+    fn astro_summary(&self, project_name: &str, project_dir: &Path, options: &AstroResolvedOptions);
 }

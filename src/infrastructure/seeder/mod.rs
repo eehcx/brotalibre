@@ -10,6 +10,7 @@ pub(crate) mod ui_integration;
 use crate::application::ports::AstroSeeder;
 use crate::application::ports::Seeder;
 use crate::domain::project::ArchitectureProfile;
+use crate::domain::project::AstroResolvedOptions;
 use crate::domain::project::DocsEngine;
 use crate::domain::project::PackageManager;
 use crate::domain::project::ResolvedOptions;
@@ -125,30 +126,196 @@ impl Seeder for SystemSeeder {
 }
 
 impl AstroSeeder for SystemSeeder {
-    fn ensure_astro_tools(&self, _package_manager: PackageManager) -> Result<()> {
-        // TODO(commit 3): check node + npm/npx for `npm create astro`.
-        Ok(())
+    fn ensure_astro_tools(&self, package_manager: PackageManager) -> Result<()> {
+        let mut runner = SystemCommandRunner;
+        commands::ensure_astro_required_tools(&mut runner, package_manager)
     }
 
     fn scaffold_astro_project(
         &self,
-        _project_name: &str,
-        _docs_engine: DocsEngine,
-        _package_manager: PackageManager,
+        project_name: &str,
+        options: &AstroResolvedOptions,
     ) -> Result<()> {
-        // TODO(commit 3): shell out to `npm create starlight@latest` / `npm create astro@latest`.
-        bail!("Astro scaffolding is not implemented yet")
+        let mut runner = SystemCommandRunner;
+        commands::scaffold_astro_project(&mut runner, project_name, options)
     }
 
     fn apply_astro_template(
         &self,
-        _project_dir: &Path,
-        _docs_engine: DocsEngine,
-        _project_name: &str,
-        _locales: &[String],
+        project_dir: &Path,
+        docs_engine: DocsEngine,
+        project_name: &str,
+        locales: &[String],
     ) -> Result<()> {
-        // TODO(commit 3): render per-locale .j2 templates from templates/astro.
-        bail!("Astro template application is not implemented yet")
+        apply_astro_templates(project_dir, docs_engine, project_name, locales)
+    }
+}
+
+fn apply_astro_templates(
+    project_dir: &Path,
+    docs_engine: DocsEngine,
+    project_name: &str,
+    locales: &[String],
+) -> Result<()> {
+    let default_locale = locales
+        .first()
+        .context("at least one locale is required for an Astro project")?;
+    for locale in locales {
+        if locale.is_empty()
+            || !locale
+                .chars()
+                .all(|character| character.is_ascii_alphanumeric() || character == '-')
+        {
+            bail!("invalid locale `{locale}`: use letters, numbers, and hyphens only");
+        }
+    }
+    let locale_context = locales
+        .iter()
+        .map(|locale| {
+            json!({
+                "code": locale,
+                "label": locale_label(locale),
+                "lang": locale,
+            })
+        })
+        .collect::<Vec<_>>();
+    let base_context = json!({
+        "project_name": project_name,
+        "locales": locale_context.clone(),
+        "default_locale": default_locale,
+    });
+    let template_base = astro_template_base()?;
+    let loader = templates::TemplateLoader::new_astro(&template_base)?;
+
+    match docs_engine {
+        DocsEngine::Starlight => {
+            write_rendered(
+                project_dir,
+                "astro.config.mjs",
+                &loader,
+                "starlight/astro.config.mjs.j2",
+                &base_context,
+            )?;
+            write_rendered(
+                project_dir,
+                "src/content/docs/index.mdx",
+                &loader,
+                "starlight/src/content/docs/index.mdx.j2",
+                &json!({
+                    "project_name": project_name,
+                    "locale": default_locale,
+                    "locale_label": locale_label(default_locale),
+                    "locales": locale_context.clone(),
+                }),
+            )?;
+            for locale in locales.iter().skip(1) {
+                write_rendered(
+                    project_dir,
+                    &format!("src/content/docs/{locale}/index.mdx"),
+                    &loader,
+                    "starlight/src/content/docs/{{locale}}/index.mdx.j2",
+                    &json!({
+                        "project_name": project_name,
+                        "locale": locale,
+                        "locale_label": locale_label(locale),
+                        "locales": locale_context.clone(),
+                    }),
+                )?;
+            }
+        }
+        DocsEngine::Native => {
+            write_rendered(
+                project_dir,
+                "astro.config.mjs",
+                &loader,
+                "native/astro.config.mjs.j2",
+                &base_context,
+            )?;
+            write_rendered(
+                project_dir,
+                "src/content.config.ts",
+                &loader,
+                "native/src/content.config.ts.j2",
+                &base_context,
+            )?;
+            write_rendered(
+                project_dir,
+                "src/layouts/DocLayout.astro",
+                &loader,
+                "native/src/layouts/DocLayout.astro.j2",
+                &base_context,
+            )?;
+            write_rendered(
+                project_dir,
+                "src/components/LocaleSwitcher.astro",
+                &loader,
+                "native/src/components/LocaleSwitcher.astro.j2",
+                &base_context,
+            )?;
+            write_rendered(
+                project_dir,
+                "src/pages/index.astro",
+                &loader,
+                "native/src/pages/index.astro.j2",
+                &json!({
+                    "project_name": project_name,
+                    "locale": default_locale,
+                    "locale_label": locale_label(default_locale),
+                }),
+            )?;
+            for locale in locales.iter().skip(1) {
+                write_rendered(
+                    project_dir,
+                    &format!("src/pages/{locale}/index.astro"),
+                    &loader,
+                    "native/src/pages/[locale]/index.astro.j2",
+                    &json!({
+                        "project_name": project_name,
+                        "locale": locale,
+                        "locale_label": locale_label(locale),
+                    }),
+                )?;
+            }
+            for locale in locales {
+                write_rendered(
+                    project_dir,
+                    &format!("src/i18n/ui-{locale}.json"),
+                    &loader,
+                    "i18n/ui-{{locale}}.json.j2",
+                    &json!({
+                        "locale": locale,
+                        "locale_label": locale_label(locale),
+                    }),
+                )?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn write_rendered(
+    project_dir: &Path,
+    target: &str,
+    loader: &templates::TemplateLoader,
+    template: &str,
+    context: &serde_json::Value,
+) -> Result<()> {
+    let content = loader.render(template, context)?;
+    commands::write_file(&project_dir.join(target), &content)
+}
+
+fn locale_label(locale: &str) -> &'static str {
+    match locale.to_ascii_lowercase().as_str() {
+        "en" => "English",
+        "es" => "Spanish",
+        "fr" => "French",
+        "de" => "Deutsch",
+        "pt" | "pt-br" => "Portuguese",
+        "it" => "Italian",
+        "ja" => "Japanese",
+        "ko" => "Korean",
+        _ => "Documentation",
     }
 }
 
@@ -162,6 +329,22 @@ fn template_base() -> Result<PathBuf> {
         executable_dir.as_deref(),
         &current_dir,
     ))
+}
+
+fn astro_template_base() -> Result<PathBuf> {
+    let executable_dir = std::env::current_exe()
+        .ok()
+        .and_then(|path| path.parent().map(Path::to_path_buf));
+    let current_dir = std::env::current_dir().context("unable to resolve current directory")?;
+
+    if let Some(executable_dir) = executable_dir {
+        let bundled_templates = executable_dir.join("templates").join("astro");
+        if bundled_templates.is_dir() {
+            return Ok(bundled_templates);
+        }
+    }
+
+    Ok(current_dir.join("templates").join("astro"))
 }
 
 fn resolve_template_base(executable_dir: Option<&Path>, current_dir: &Path) -> PathBuf {
@@ -404,6 +587,67 @@ mod tests {
 
         let rendered = loader.render("app/app.config.ts.j2", ()).unwrap();
         assert!(rendered.contains("ApplicationConfig"));
+    }
+
+    #[test]
+    fn astro_starlight_templates_render_default_and_secondary_locales() {
+        let tmp = tempdir().unwrap();
+        apply_astro_templates(
+            tmp.path(),
+            DocsEngine::Starlight,
+            "docs-site",
+            &["en".to_string(), "es".to_string()],
+        )
+        .unwrap();
+
+        assert!(tmp.path().join("astro.config.mjs").is_file());
+        assert!(tmp.path().join("src/content/docs/index.mdx").is_file());
+        assert!(tmp.path().join("src/content/docs/es/index.mdx").is_file());
+        let config = fs::read_to_string(tmp.path().join("astro.config.mjs")).unwrap();
+        assert!(config.contains("defaultLocale: 'root'"));
+        assert!(config.contains("'es'"));
+    }
+
+    #[test]
+    fn astro_native_templates_render_routes_layout_and_ui_strings() {
+        let tmp = tempdir().unwrap();
+        apply_astro_templates(
+            tmp.path(),
+            DocsEngine::Native,
+            "docs-site",
+            &["en".to_string(), "es".to_string()],
+        )
+        .unwrap();
+
+        assert!(tmp.path().join("src/content.config.ts").is_file());
+        assert!(tmp.path().join("src/pages/index.astro").is_file());
+        assert!(tmp.path().join("src/pages/es/index.astro").is_file());
+        assert!(tmp.path().join("src/i18n/ui-en.json").is_file());
+        assert!(tmp.path().join("src/i18n/ui-es.json").is_file());
+        let page = fs::read_to_string(tmp.path().join("src/pages/es/index.astro")).unwrap();
+        assert!(page.contains("getStaticPaths"));
+        assert!(page.contains("docs-site"));
+    }
+
+    #[test]
+    fn astro_templates_require_at_least_one_locale() {
+        let tmp = tempdir().unwrap();
+        let error =
+            apply_astro_templates(tmp.path(), DocsEngine::Native, "docs-site", &[]).unwrap_err();
+        assert!(error.to_string().contains("at least one locale"));
+    }
+
+    #[test]
+    fn astro_templates_reject_path_unsafe_locale() {
+        let tmp = tempdir().unwrap();
+        let error = apply_astro_templates(
+            tmp.path(),
+            DocsEngine::Native,
+            "docs-site",
+            &["../es".to_string()],
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("invalid locale"));
     }
 
     #[test]

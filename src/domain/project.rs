@@ -84,8 +84,8 @@ pub struct NewProjectRequest {
     pub skip_install: bool,
     pub skip_git: bool,
     pub yes: bool,
-    /// Target framework. When `None` it resolves to `Framework::Angular`
-    /// (the historical behavior) unless `--yes` is used.
+    /// Target framework. When `None`, interactive runs ask the user and
+    /// non-interactive/`--yes` runs keep Angular as the default.
     pub framework: Option<Framework>,
     /// Docs engine for Astro projects. Ignored when `framework` is Angular.
     /// When `None` it resolves to `DocsEngine::Starlight`.
