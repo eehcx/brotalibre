@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/eehcx/brotalibre/compare/ngseed-v0.2.2...ngseed-v0.3.0) (2026-07-29)
+
+
+### Features
+
+* Add Astro framework support and enhance documentation scaffolding ([#14](https://github.com/eehcx/brotalibre/issues/14)) ([6502608](https://github.com/eehcx/brotalibre/commit/6502608c2212fb52b414c7ef8388acc38cdaf53c))
+
 ## [0.2.2](https://github.com/eehcx/ngseed/compare/ngseed-v0.2.1...ngseed-v0.2.2) (2026-03-27)
 
 
