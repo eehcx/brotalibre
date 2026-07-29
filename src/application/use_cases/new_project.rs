@@ -343,6 +343,9 @@ mod tests {
                 skip_install: true,
                 skip_git: false,
                 yes: true,
+                framework: None,
+                docs_engine: None,
+                locales: vec![],
             })
             .unwrap();
 

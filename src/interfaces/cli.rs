@@ -2,6 +2,8 @@ use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::domain::project::ArchitectureProfile;
+use crate::domain::project::DocsEngine;
+use crate::domain::project::Framework;
 use crate::domain::project::GenerateFeatureRequest;
 use crate::domain::project::NewProjectRequest;
 use crate::domain::project::PackageManager;
@@ -86,6 +88,20 @@ struct NewCommand {
 
     #[arg(long)]
     yes: bool,
+
+    /// Target frontend framework (angular | astro). Defaults to angular.
+    #[arg(long, value_enum)]
+    framework: Option<CliFramework>,
+
+    /// Docs engine for Astro projects (starlight | native). Defaults to starlight.
+    /// Ignored when --framework is angular.
+    #[arg(long, value_enum)]
+    docs_engine: Option<CliDocsEngine>,
+
+    /// Comma-separated list of locales for Astro docs i18n, e.g. `--i18n en,es`.
+    /// The first entry is the default locale. Ignored when --framework is angular.
+    #[arg(long, value_delimiter = ',')]
+    i18n: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
@@ -118,6 +134,18 @@ enum CliArchitectureProfile {
     Ddd,
 }
 
+#[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
+enum CliFramework {
+    Angular,
+    Astro,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
+enum CliDocsEngine {
+    Starlight,
+    Native,
+}
+
 pub enum AppCommand {
     New(NewProjectRequest),
     GenerateFeature(GenerateFeatureRequest),
@@ -147,6 +175,9 @@ fn map_cli_to_command(cli: Cli) -> AppCommand {
             skip_install: cmd.skip_install,
             skip_git: cmd.skip_git,
             yes: cmd.yes,
+            framework: cmd.framework.map(Into::into),
+            docs_engine: cmd.docs_engine.map(Into::into),
+            locales: cmd.i18n,
         }),
         Commands::Generate(cmd) => match cmd.sub {
             GenerateSubCommand::Feature(sub) => {
@@ -214,6 +245,24 @@ impl From<CliArchitectureProfile> for ArchitectureProfile {
     }
 }
 
+impl From<CliFramework> for Framework {
+    fn from(value: CliFramework) -> Self {
+        match value {
+            CliFramework::Angular => Framework::Angular,
+            CliFramework::Astro => Framework::Astro,
+        }
+    }
+}
+
+impl From<CliDocsEngine> for DocsEngine {
+    fn from(value: CliDocsEngine) -> Self {
+        match value {
+            CliDocsEngine::Starlight => DocsEngine::Starlight,
+            CliDocsEngine::Native => DocsEngine::Native,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -257,6 +306,82 @@ mod tests {
         };
 
         assert_eq!(request.styles, Some(StylesChoice::TailwindCSS));
+    }
+
+    #[test]
+    fn parse_new_command_defaults_framework_to_none() {
+        let command = parse_from(["brota", "new", "demo", "--yes"]).unwrap();
+
+        let request = match command {
+            AppCommand::New(r) => r,
+            _ => panic!("expected New command"),
+        };
+
+        assert_eq!(request.framework, None);
+        assert_eq!(request.docs_engine, None);
+        assert!(request.locales.is_empty());
+    }
+
+    #[test]
+    fn parse_new_command_with_astro_framework_defaults_engine_to_none() {
+        let command = parse_from(["brota", "new", "docs", "--framework", "astro"]).unwrap();
+
+        let request = match command {
+            AppCommand::New(r) => r,
+            _ => panic!("expected New command"),
+        };
+
+        assert_eq!(request.framework, Some(Framework::Astro));
+        assert_eq!(request.docs_engine, None);
+        assert!(request.locales.is_empty());
+    }
+
+    #[test]
+    fn parse_new_command_with_astro_starlight_and_i18n_locales() {
+        let command = parse_from([
+            "brota",
+            "new",
+            "docs",
+            "--framework",
+            "astro",
+            "--docs-engine",
+            "starlight",
+            "--i18n",
+            "en,es",
+        ])
+        .unwrap();
+
+        let request = match command {
+            AppCommand::New(r) => r,
+            _ => panic!("expected New command"),
+        };
+
+        assert_eq!(request.framework, Some(Framework::Astro));
+        assert_eq!(request.docs_engine, Some(DocsEngine::Starlight));
+        assert_eq!(request.locales, vec!["en", "es"]);
+    }
+
+    #[test]
+    fn parse_new_command_with_astro_native_engine_without_locales() {
+        let command = parse_from([
+            "brota",
+            "new",
+            "docs",
+            "--framework",
+            "astro",
+            "--docs-engine",
+            "native",
+        ])
+        .unwrap();
+
+        let request = match command {
+            AppCommand::New(r) => r,
+            _ => panic!("expected New command"),
+        };
+
+        assert_eq!(request.framework, Some(Framework::Astro));
+        assert_eq!(request.docs_engine, Some(DocsEngine::Native));
+        assert!(request.locales.is_empty());
     }
 
     #[test]
