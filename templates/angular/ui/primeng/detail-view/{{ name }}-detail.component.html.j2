@@ -1,0 +1,23 @@
+@if (loading()) {
+  <p-progressSpinner />
+}
+
+@if (error()) {
+  <p class="error-message">{% raw %}{{ error() }}{% endraw %}</p>
+}
+
+@if (!loading() && item()) {
+  <p-card [header]="'{{ name }} Detail'">
+    {% for field in fields %}
+    <div class="field-row">
+      <span class="field-label">{{ field.name | capitalize }}</span>
+      <span class="field-value">{% raw %}{{ item()?.{% endraw %}{{ field.name }}{% raw %} }}{% endraw %}</span>
+    </div>
+    {% endfor %}
+
+    <ng-template pTemplate="footer">
+      <p-button label="Back" severity="secondary" routerLink="../" />
+      <p-button label="Edit" icon="pi pi-pencil" [routerLink]="['../', id(), 'edit']" />
+    </ng-template>
+  </p-card>
+}

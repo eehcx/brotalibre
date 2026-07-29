@@ -1,0 +1,43 @@
+---
+import LocaleSwitcher from '../components/LocaleSwitcher.astro';
+
+interface Props {
+  title: string;
+  locale: string;
+  locales: Array<{ code: string; label: string }>;
+}
+
+const { title, locale, locales } = Astro.props;
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <header>
+      <a href={locale === '{{ default_locale }}' ? '/' : `/${locale}/`}>
+        {{ project_name }}
+      </a>
+      <LocaleSwitcher locale={locale} locales={locales} />
+    </header>
+    <main>
+      <slot />
+    </main>
+  </body>
+</html>
+
+<style>
+  :global(*) { box-sizing: border-box; }
+  :global(body) {
+    margin: 0;
+    color: #172033;
+    font-family: system-ui, sans-serif;
+  }
+  header, main { margin: 0 auto; max-width: 72rem; padding: 1.25rem; }
+  header { align-items: center; display: flex; justify-content: space-between; }
+  main { min-height: 70vh; }
+</style>

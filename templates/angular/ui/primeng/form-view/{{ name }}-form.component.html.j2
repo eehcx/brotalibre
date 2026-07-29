@@ -1,0 +1,26 @@
+<form [formGroup]="form" (ngSubmit)="onSubmit()">
+  {% for field in fields %}
+  <div class="field">
+    <label for="{{ field.name }}">{{ field.name | capitalize }}</label>
+    <input
+      pInputText
+      id="{{ field.name }}"
+      formControlName="{{ field.name }}"
+      [class.ng-invalid]="form.get('{{ field.name }}')?.invalid && form.get('{{ field.name }}')?.touched"
+    />
+    @if (form.get('{{ field.name }}')?.hasError('required') && form.get('{{ field.name }}')?.touched) {
+      <small class="p-error">{{ field.name | capitalize }} is required</small>
+    }
+  </div>
+  {% endfor %}
+
+  <div class="form-actions">
+    <p-button label="Cancel" severity="secondary" (onClick)="onCancel()" />
+    <p-button
+      [label]="id() ? 'Update' : 'Create'"
+      type="submit"
+      [disabled]="form.invalid || loading()"
+      [loading]="loading()"
+    />
+  </div>
+</form>

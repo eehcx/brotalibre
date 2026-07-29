@@ -1,0 +1,122 @@
+import { signalStore, withState, withMethods, withComputed, withHooks } from '@ngrx/signals';
+import { computed, inject, Signal } from '@angular/core';
+import { rxMethod } from '@ngrx/signals/rxjs-interop';
+import { tapResponse } from '@ngrx/operators';
+import { pipe, switchMap, tap } from 'rxjs';
+import { from } from 'rxjs';
+import { {{ name }}, type {{ name }}Props } from '../domain/{{ name_kebab }}.entity';
+import type { {{ name }}Id } from '../domain/value-objects/{{ name_kebab }}-id.vo';
+import { {{ name }}RepositoryPort } from '../domain/{{ name_kebab }}-repository.port';
+
+interface {{ name }}State {
+  items: {{ name }}[];
+  selected: {{ name }} | null;
+  loading: boolean;
+  error: string | null;
+}
+
+const initialState: {{ name }}State = {
+  items: [],
+  selected: null,
+  loading: false,
+  error: null,
+};
+
+export const {{ name }}Store = signalStore(
+  { providedIn: 'root' },
+  withState(initialState),
+  withComputed(({ items }: { items: Signal<{{ name }}[]> }) => ({
+    total: computed(() => items().length),
+  })),
+  withMethods((store: any, repo = inject({{ name }}RepositoryPort)) => ({
+    setSelected(item: {{ name }} | null): void {
+      store.selected.set(item);
+    },
+
+    clearSelected(): void {
+      store.selected.set(null);
+    },
+
+    clearError(): void {
+      store.error.set(null);
+    },
+
+    loadAll: rxMethod<void>(
+      pipe(
+        tap(() => store.loading.set(true)),
+        switchMap(() =>
+          from(repo.getAll()).pipe(
+            tapResponse({
+              next: (items: {{ name }}[]) => store.items.set(items),
+              error: (err: Error) => store.error.set(err.message),
+              finalize: () => store.loading.set(false),
+            })
+          )
+        )
+      )
+    ),
+
+    loadById: rxMethod<{{ name }}Id>(
+      pipe(
+        tap(() => store.loading.set(true)),
+        switchMap((id: {{ name }}Id) =>
+          from(repo.getById(id)).pipe(
+            tapResponse({
+              next: (item: {{ name }}) => store.selected.set(item),
+              error: (err: Error) => store.error.set(err.message),
+              finalize: () => store.loading.set(false),
+            })
+          )
+        )
+      )
+    ),
+
+    create: rxMethod<{{ name }}Props>(
+      pipe(
+        switchMap((props: {{ name }}Props) =>
+          from(repo.create({{ name }}.create(props))).pipe(
+            tapResponse({
+              next: (item: {{ name }}) => store.items.update((items: {{ name }}[]) => [...items, item]),
+              error: (err: Error) => store.error.set(err.message),
+            })
+          )
+        )
+      )
+    ),
+
+    update: rxMethod<{{ name }}Props & { id: {{ name }}Id }>(
+      pipe(
+        switchMap((props: {{ name }}Props & { id: {{ name }}Id }) =>
+          from(repo.update({{ name }}.create(props))).pipe(
+            tapResponse({
+              next: (item: {{ name }}) =>
+                store.items.update((items: {{ name }}[]) =>
+                  items.map((i: {{ name }}) => (i.id === item.id ? item : i))
+                ),
+              error: (err: Error) => store.error.set(err.message),
+            })
+          )
+        )
+      )
+    ),
+
+    delete: rxMethod<{{ name }}Id>(
+      pipe(
+        switchMap((id: {{ name }}Id) =>
+          from(repo.delete(id)).pipe(
+            tapResponse({
+              next: () =>
+                store.items.update((items: {{ name }}[]) => items.filter((i: {{ name }}) => i.id !== id)),
+              error: (err: Error) => store.error.set(err.message),
+            })
+          )
+        )
+      )
+    ),
+  })),
+  withHooks({
+    onInit(store: any) {
+      store.loadAll();
+    },
+  })
+);

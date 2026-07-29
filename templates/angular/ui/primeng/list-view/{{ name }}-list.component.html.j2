@@ -1,0 +1,37 @@
+<p-toast />
+
+@if (loading()) {
+  <p-progressSpinner />
+}
+
+@if (error()) {
+  <p class="error-message">{% raw %}{{ error() }}{% endraw %}</p>
+}
+
+@if (!loading() && !error()) {
+  <p-table [value]="items()" [paginator]="true" [rows]="10" [showCurrentPageReport]="true">
+    <ng-template pTemplate="header">
+      <tr>
+        {% for field in fields %}
+        <th pSortableColumn="{{ field.name }}">
+          {{ field.name | capitalize }} <p-sortIcon field="{{ field.name }}" />
+        </th>
+        {% endfor %}
+        <th>Actions</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-row>
+      <tr>
+        {% for field in fields %}
+        <td>{% raw %}{{ row.{% endraw %}{{ field.name }}{% raw %} }}{% endraw %}</td>
+        {% endfor %}
+        <td>
+          <p-button icon="pi pi-eye" [routerLink]="[row.id]" severity="secondary" />
+          <p-button icon="pi pi-pencil" [routerLink]="[row.id, 'edit']" severity="info" />
+          <p-button icon="pi pi-trash" (onClick)="onDelete(row.id)" severity="danger" />
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+}

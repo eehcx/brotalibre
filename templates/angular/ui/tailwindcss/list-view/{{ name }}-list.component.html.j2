@@ -1,0 +1,46 @@
+<div class="p-6">
+  @if (loading()) {
+    <div class="flex justify-center items-center h-40">
+      <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+    </div>
+  }
+
+  @if (error()) {
+    <p class="text-red-500 text-sm">{% raw %}{{ error() }}{% endraw %}</p>
+  }
+
+  @if (!loading() && !error()) {
+    <div class="overflow-x-auto rounded-lg shadow">
+      <table class="min-w-full divide-y divide-gray-200 bg-white">
+        <thead class="bg-gray-50">
+          <tr>
+            {% for field in fields %}
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              {{ field.name | capitalize }}
+            </th>
+            {% endfor %}
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+          @for (item of items(); track item.id) {
+            <tr class="hover:bg-gray-50 transition-colors">
+              {% for field in fields %}
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                {% raw %}{{ item.{% endraw %}{{ field.name }}{% raw %} }}{% endraw %}
+              </td>
+              {% endfor %}
+              <td class="px-6 py-4 whitespace-nowrap text-sm flex gap-2">
+                <a [routerLink]="[item.id]" class="text-blue-600 hover:underline">View</a>
+                <a [routerLink]="[item.id, 'edit']" class="text-yellow-600 hover:underline">Edit</a>
+                <button (click)="onDelete(item.id)" class="text-red-600 hover:underline">Delete</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

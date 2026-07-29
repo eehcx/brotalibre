@@ -1,0 +1,29 @@
+import { inject, Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+import { ApiService } from '../api.service';
+
+@Injectable({ providedIn: 'root' })
+export class {{ name }}Service {
+  readonly #api = inject(ApiService);
+  readonly #path = '{{ prefix }}';
+
+  getAll(): Observable<unknown[]> {
+    return this.#api.get<unknown[]>(this.#path);
+  }
+
+  getById(id: string): Observable<unknown> {
+    return this.#api.get<unknown>(`${this.#path}/${id}`);
+  }
+
+  create(payload: unknown): Observable<unknown> {
+    return this.#api.post<unknown>(this.#path, payload);
+  }
+
+  update(id: string, payload: unknown): Observable<unknown> {
+    return this.#api.put<unknown>(`${this.#path}/${id}`, payload);
+  }
+
+  delete(id: string): Observable<void> {
+    return this.#api.delete<void>(`${this.#path}/${id}`);
+  }
+}

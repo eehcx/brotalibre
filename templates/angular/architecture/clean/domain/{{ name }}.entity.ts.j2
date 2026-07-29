@@ -1,0 +1,50 @@
+import { {{ name }}Id } from './value-objects/{{ name_kebab }}-id.vo';
+import { {{ name }}Validator, {{ name }}ValidationError } from './{{ name_kebab }}.errors';
+
+export interface {{ name }}Props {
+  id?: {{ name }}Id;
+{% for field in fields %}
+  {{ field.name }}: {{ field.type }};
+{% endfor %}
+}
+
+export class {{ name }} {
+  private constructor(
+    public readonly id: {{ name }}Id,
+{% for field in fields %}
+    public readonly {{ field.name }}: {{ field.type }},
+{% endfor %}
+  ) {}
+
+  static create(props: {{ name }}Props): {{ name }} {
+    const errors = {{ name }}Validator.validate(props);
+    if (errors.length > 0) {
+      throw new {{ name }}ValidationError(errors);
+    }
+
+    return new {{ name }}(
+      props.id ?? {{ name }}Id.generate(),
+{% for field in fields %}
+      props.{{ field.name }},
+{% endfor %}
+    );
+  }
+
+{% for field in fields %}
+  rename{{ field.name | capitalize }}(value: {{ field.type }}): {{ name }} {
+    return {{ name }}.create({
+      ...this.toSnapshot(),
+      {{ field.name }}: value,
+    });
+  }
+{% endfor %}
+
+  toSnapshot(): {{ name }}Props {
+    return {
+      id: this.id,
+{% for field in fields %}
+      {{ field.name }}: this.{{ field.name }},
+{% endfor %}
+    };
+  }
+}

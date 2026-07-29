@@ -1,0 +1,12 @@
+import { Component } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
+
+@Component({
+  selector: 'app-root',
+  imports: [RouterOutlet],
+  templateUrl: '{{ template_url }}',
+  styleUrl: '{{ style_url }}',
+})
+export class {{ component_class }} {
+  readonly title = '{{ project_name }}';
+}

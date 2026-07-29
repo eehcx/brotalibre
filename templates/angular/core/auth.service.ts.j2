@@ -1,0 +1,32 @@
+import { Injectable, signal, computed } from '@angular/core';
+
+interface AuthState {
+  token: string | null;
+  userId: string | null;
+}
+
+@Injectable({ providedIn: 'root' })
+export class AuthService {
+  readonly #state = signal<AuthState>({ token: null, userId: null });
+
+  readonly isAuthenticated = computed(() => !!this.#state().token);
+  readonly token = computed(() => this.#state().token);
+  readonly userId = computed(() => this.#state().userId);
+
+  login(token: string, userId: string): void {
+    this.#state.set({ token, userId });
+    localStorage.setItem('token', token);
+  }
+
+  logout(): void {
+    this.#state.set({ token: null, userId: null });
+    localStorage.removeItem('token');
+  }
+
+  restoreSession(): void {
+    const token = localStorage.getItem('token');
+    if (token) {
+      this.#state.update((s) => ({ ...s, token }));
+    }
+  }
+}

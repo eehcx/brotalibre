@@ -1,0 +1,39 @@
+import type { {{ name }} } from '../domain/{{ name_kebab }}.entity';
+import type { {{ name }}Id } from '../domain/value-objects/{{ name_kebab }}-id.vo';
+import { {{ name }}RepositoryPort } from '../domain/{{ name_kebab }}-repository.port';
+import { {{ name }}NotFoundError } from '../domain/{{ name_kebab }}.errors';
+import { {{ name_snake | upper }}_MOCK_DATA } from './{{ name_kebab }}.mock';
+
+export class {{ name }}Repository implements {{ name }}RepositoryPort {
+  // Replace this in-memory adapter with HttpClient calls to {{ prefix }} when the API is ready.
+  readonly #items = [...{{ name_snake | upper }}_MOCK_DATA];
+
+  getAll(): Promise<{{ name }}[]> {
+    return Promise.resolve([...this.#items]);
+  }
+
+  async getById(id: {{ name }}Id): Promise<{{ name }}> {
+    const item = this.#items.find(current => current.id === id);
+    if (!item) throw new {{ name }}NotFoundError(id);
+    return item;
+  }
+
+  create(entity: {{ name }}): Promise<{{ name }}> {
+    this.#items.push(entity);
+    return Promise.resolve(entity);
+  }
+
+  update(entity: {{ name }}): Promise<{{ name }}> {
+    const index = this.#items.findIndex(current => current.id === entity.id);
+    if (index === -1) throw new {{ name }}NotFoundError(entity.id);
+    this.#items[index] = entity;
+    return Promise.resolve(entity);
+  }
+
+  delete(id: {{ name }}Id): Promise<void> {
+    const index = this.#items.findIndex(current => current.id === id);
+    if (index === -1) throw new {{ name }}NotFoundError(id);
+    this.#items.splice(index, 1);
+    return Promise.resolve();
+  }
+}

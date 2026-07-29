@@ -1,0 +1,12 @@
+import { defineConfig } from 'astro/config';
+
+export default defineConfig({
+  i18n: {
+    locales: [{% for locale in locales %}'{{ locale.code }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+    defaultLocale: '{{ default_locale }}',
+    routing: {
+      prefixDefaultLocale: false,
+      fallbackType: 'redirect',
+    },
+  },
+});

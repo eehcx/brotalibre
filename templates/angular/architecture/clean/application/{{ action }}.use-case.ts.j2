@@ -1,0 +1,44 @@
+import { inject, Injectable } from '@angular/core';
+import type { {{ name }} } from '../domain/{{ name_kebab }}.entity';
+import type { {{ name }}Id } from '../domain/value-objects/{{ name_kebab }}-id.vo';
+import { {{ name }}RepositoryPort } from '../domain/{{ name_kebab }}-repository.port';
+import { {{ name }}NotFoundError } from '../domain/{{ name_kebab }}.errors';
+
+@Injectable({ providedIn: 'root' })
+export class {{ action }}UseCase {
+  readonly #repository = inject({{ name }}RepositoryPort);
+
+  async execute(
+{% if action == 'GetAll' %}
+    _?: never
+{% elif action == 'GetById' %}
+    id: {{ name }}Id
+{% elif action == 'Create' or action == 'Update' %}
+    entity: {{ name }}
+{% elif action == 'Delete' %}
+    id: {{ name }}Id
+{% endif %}
+  ): Promise<
+{% if action == 'GetAll' %}
+    {{ name }}[]
+{% elif action == 'GetById' or action == 'Create' or action == 'Update' %}
+    {{ name }}
+{% elif action == 'Delete' %}
+    void
+{% endif %}
+  > {
+{% if action == 'GetAll' %}
+    return this.#repository.getAll();
+{% elif action == 'GetById' %}
+    const result = await this.#repository.getById(id);
+    if (!result) throw new {{ name }}NotFoundError(id.toString());
+    return result;
+{% elif action == 'Create' %}
+    return this.#repository.create(entity);
+{% elif action == 'Update' %}
+    return this.#repository.update(entity);
+{% elif action == 'Delete' %}
+    return this.#repository.delete(id);
+{% endif %}
+  }
+}

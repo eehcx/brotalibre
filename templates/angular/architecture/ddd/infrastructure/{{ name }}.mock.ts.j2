@@ -1,0 +1,13 @@
+import { {{ name }} } from '../domain/{{ name_kebab }}.entity';
+import { {{ name }}Id } from '../domain/value-objects/{{ name_kebab }}-id.vo';
+
+export const {{ name_snake | upper }}_MOCK_DATA: {{ name }}[] = [
+{% for index in [1, 2, 3, 4, 5] %}
+  {{ name }}.create({
+    id: {{ name }}Id.from('{{ name_kebab }}-{{ index }}'),
+{% for field in fields %}
+    {{ field.name }}: {% if field.type == 'number' %}{{ index }}{% else %}'{{ field.name | capitalize }} {{ index }}'{% endif %},
+{% endfor %}
+  }),
+{% endfor %}
+];
