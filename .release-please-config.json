@@ -3,7 +3,7 @@
   "packages": {
     ".": {
       "package-name": "brotalibre",
-      "component": "ngseed",
+      "component": "brotalibre",
       "release-type": "rust",
       "include-v-in-tag": true
     }
