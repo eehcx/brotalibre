@@ -30,7 +30,7 @@ impl UiSelector for DialoguerUiSelector {
     }
 
     fn select_styles(&self) -> Result<StylesChoice> {
-        let choices = ["None", "TailwindCSS"];
+        let choices = ["CSS (default)", "SCSS", "Sass", "Less", "TailwindCSS"];
         let selected = Select::with_theme(&ColorfulTheme::default())
             .with_prompt("Select styles option")
             .items(&choices)
@@ -39,9 +39,12 @@ impl UiSelector for DialoguerUiSelector {
             .context("failed to read styles selection")?;
 
         let styles = match selected {
-            0 => StylesChoice::None,
-            1 => StylesChoice::TailwindCSS,
-            _ => StylesChoice::None,
+            0 => StylesChoice::Css,
+            1 => StylesChoice::Scss,
+            2 => StylesChoice::Sass,
+            3 => StylesChoice::Less,
+            4 => StylesChoice::TailwindCSS,
+            _ => StylesChoice::Css,
         };
 
         Ok(styles)

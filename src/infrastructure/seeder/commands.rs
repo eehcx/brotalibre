@@ -2,7 +2,7 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use serde_json::Value;
 
 use crate::domain::project::PackageManager;
@@ -72,7 +72,7 @@ pub(crate) fn scaffold_angular_project(
         "--defaults".to_string(),
         "--standalone".to_string(),
         "--routing".to_string(),
-        "--style=scss".to_string(),
+        format!("--style={}", options.styles.angular_cli_value()),
         "--ssr=false".to_string(),
         format!("--package-manager={package_manager}"),
     ];
@@ -215,21 +215,19 @@ mod tests {
     fn scaffold_calls_ng_new_with_expected_flags() {
         let mut runner = FakeRunner::default();
 
-        // Inline scaffold logic for the test (same flags as scaffold_angular_project)
-        let package_manager = package_manager_cli_name(PackageManager::Pnpm);
-        let mut args = vec![
-            "new".to_string(),
-            "demo-app".to_string(),
-            "--defaults".to_string(),
-            "--standalone".to_string(),
-            "--routing".to_string(),
-            "--style=scss".to_string(),
-            "--ssr=false".to_string(),
-            format!("--package-manager={package_manager}"),
-        ];
-        args.push("--skip-install".to_string());
-
-        runner.run("ng", &args, None).unwrap();
+        scaffold_angular_project(
+            &mut runner,
+            "demo-app",
+            ResolvedOptions {
+                ui: UiChoice::None,
+                styles: StylesChoice::Scss,
+                package_manager: PackageManager::Pnpm,
+                architecture: ArchitectureProfile::Clean,
+                skip_install: true,
+                skip_git: false,
+            },
+        )
+        .unwrap();
 
         assert_eq!(runner.calls.len(), 1);
         let (program, args, _) = &runner.calls[0];
@@ -248,24 +246,45 @@ mod tests {
     fn scaffold_passes_skip_git_when_requested() {
         let mut runner = FakeRunner::default();
 
-        let package_manager = package_manager_cli_name(PackageManager::Npm);
-        let mut args = vec![
-            "new".to_string(),
-            "demo-app".to_string(),
-            "--defaults".to_string(),
-            "--standalone".to_string(),
-            "--routing".to_string(),
-            "--style=scss".to_string(),
-            "--ssr=false".to_string(),
-            format!("--package-manager={package_manager}"),
-        ];
-        args.push("--skip-git".to_string());
-
-        runner.run("ng", &args, None).unwrap();
+        scaffold_angular_project(
+            &mut runner,
+            "demo-app",
+            ResolvedOptions {
+                ui: UiChoice::None,
+                styles: StylesChoice::Css,
+                package_manager: PackageManager::Npm,
+                architecture: ArchitectureProfile::Clean,
+                skip_install: false,
+                skip_git: true,
+            },
+        )
+        .unwrap();
 
         assert_eq!(runner.calls.len(), 1);
         let (_, args, _) = &runner.calls[0];
         assert!(args.contains(&"--skip-git".to_string()));
+    }
+
+    #[test]
+    fn scaffold_uses_angulars_native_tailwind_style() {
+        let mut runner = FakeRunner::default();
+
+        scaffold_angular_project(
+            &mut runner,
+            "demo-app",
+            ResolvedOptions {
+                ui: UiChoice::None,
+                styles: StylesChoice::TailwindCSS,
+                package_manager: PackageManager::Npm,
+                architecture: ArchitectureProfile::Clean,
+                skip_install: true,
+                skip_git: true,
+            },
+        )
+        .unwrap();
+
+        let (_, args, _) = &runner.calls[0];
+        assert!(args.contains(&"--style=tailwind".to_string()));
     }
 
     #[test]
@@ -306,7 +325,7 @@ mod tests {
             project_name,
             ResolvedOptions {
                 ui: UiChoice::None,
-                styles: StylesChoice::None,
+                styles: StylesChoice::Css,
                 package_manager: PackageManager::Yarn,
                 architecture: ArchitectureProfile::Clean,
                 skip_install: true,

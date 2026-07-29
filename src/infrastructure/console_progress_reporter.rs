@@ -7,6 +7,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::application::ports::ProgressReporter;
 use crate::domain::project::{ArchitectureProfile, PackageManager, ResolvedOptions, UiChoice};
+use crate::domain::styles_choice::StylesChoice;
 
 pub struct ConsoleProgressReporter {
     spinner: Mutex<Option<ProgressBar>>,
@@ -132,10 +133,16 @@ impl ProgressReporter for ConsoleProgressReporter {
             style("skip install:").bold(),
             style(if options.skip_install { "yes" } else { "no" }).yellow()
         );
+        println!(
+            "{} {}",
+            style("styles:").bold(),
+            style(styles_label(options.styles)).yellow()
+        );
         println!();
         println!("{}", style("next steps").bold());
         println!("  cd {}", project_name);
         println!("  {} start", package_manager_label(options.package_manager));
+        println!("  ng serve          (recommended)");
     }
 }
 
@@ -160,5 +167,15 @@ fn architecture_label(profile: ArchitectureProfile) -> &'static str {
     match profile {
         ArchitectureProfile::Clean => "clean",
         ArchitectureProfile::Ddd => "ddd",
+    }
+}
+
+fn styles_label(styles: StylesChoice) -> &'static str {
+    match styles {
+        StylesChoice::Css => "css",
+        StylesChoice::Scss => "scss",
+        StylesChoice::Sass => "sass",
+        StylesChoice::Less => "less",
+        StylesChoice::TailwindCSS => "tailwindcss",
     }
 }

@@ -91,8 +91,11 @@ enum CliUiChoice {
 
 #[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
 enum CliStylesChoice {
+    Css,
+    Scss,
+    Sass,
+    Less,
     Tailwindcss,
-    None,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
@@ -174,8 +177,11 @@ impl From<CliUiChoice> for UiChoice {
 impl From<CliStylesChoice> for StylesChoice {
     fn from(value: CliStylesChoice) -> Self {
         match value {
+            CliStylesChoice::Css => StylesChoice::Css,
+            CliStylesChoice::Scss => StylesChoice::Scss,
+            CliStylesChoice::Sass => StylesChoice::Sass,
+            CliStylesChoice::Less => StylesChoice::Less,
             CliStylesChoice::Tailwindcss => StylesChoice::TailwindCSS,
-            CliStylesChoice::None => StylesChoice::None,
         }
     }
 }
@@ -234,6 +240,18 @@ mod tests {
     }
 
     #[test]
+    fn parse_new_command_with_tailwind_styles() {
+        let command = parse_from(["brota", "new", "demo", "--styles", "tailwindcss"]).unwrap();
+
+        let request = match command {
+            AppCommand::New(r) => r,
+            _ => panic!("expected New command"),
+        };
+
+        assert_eq!(request.styles, Some(StylesChoice::TailwindCSS));
+    }
+
+    #[test]
     fn parse_generate_feature_minimal() {
         let command = parse_from(["brota", "generate", "feature", "user"]).unwrap();
 
@@ -275,13 +293,7 @@ mod tests {
 
     #[test]
     fn parse_generate_feature_without_fields_and_architecture() {
-        let command = parse_from([
-            "brota",
-            "generate",
-            "feature",
-            "my-feature",
-        ])
-        .unwrap();
+        let command = parse_from(["brota", "generate", "feature", "my-feature"]).unwrap();
 
         let request = match command {
             AppCommand::GenerateFeature(r) => r,

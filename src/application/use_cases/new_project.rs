@@ -78,6 +78,7 @@ impl<'a> NewProjectUseCase<'a> {
             &absolute_project_dir,
             options.architecture,
             &request.project_name,
+            options.styles,
         ) {
             self.reporter
                 .stage_error("template", "template setup failed");
@@ -99,19 +100,6 @@ impl<'a> NewProjectUseCase<'a> {
         }
         self.reporter
             .stage_ok("ui setup", "UI integration completed");
-
-        if options.styles != StylesChoice::None {
-            self.reporter.stage_start("styles", "applying styles setup");
-            if let Err(err) = self.seeder.apply_styles(
-                &absolute_project_dir,
-                options.styles,
-                options.package_manager,
-            ) {
-                self.reporter.stage_error("styles", "styles setup failed");
-                return Err(err);
-            }
-            self.reporter.stage_ok("styles", "styles setup completed");
-        }
 
         self.reporter
             .summary(&request.project_name, &absolute_project_dir, options);
@@ -139,7 +127,7 @@ impl<'a> NewProjectUseCase<'a> {
         if request.yes {
             return Ok(ResolvedOptions {
                 ui: request.ui.unwrap_or(UiChoice::None),
-                styles: request.styles.unwrap_or(StylesChoice::None),
+                styles: request.styles.unwrap_or(StylesChoice::Css),
                 package_manager,
                 architecture,
                 skip_install: request.skip_install,
@@ -259,6 +247,7 @@ mod tests {
             _project_dir: &Path,
             _architecture: ArchitectureProfile,
             _project_name: &str,
+            _styles: StylesChoice,
         ) -> Result<()> {
             self.calls
                 .borrow_mut()
@@ -291,16 +280,6 @@ mod tests {
                 .push("apply_ui_integration".to_string());
             Ok(())
         }
-
-        fn apply_styles(
-            &self,
-            _project_dir: &Path,
-            _styles: StylesChoice,
-            _package_manager: PackageManager,
-        ) -> Result<()> {
-            self.calls.borrow_mut().push("apply_styles".to_string());
-            Ok(())
-        }
     }
 
     #[derive(Default)]
@@ -322,7 +301,7 @@ mod tests {
         };
         let ui_selector = FakeUiSelector {
             ui: UiChoice::None,
-            styles: StylesChoice::None,
+            styles: StylesChoice::Css,
         };
         let seeder = FakeSeeder::default();
         let reporter = FakeReporter;

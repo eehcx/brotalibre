@@ -31,6 +31,7 @@ pub trait Seeder {
         project_dir: &Path,
         architecture: ArchitectureProfile,
         project_name: &str,
+        styles: StylesChoice,
     ) -> Result<()>;
     fn apply_feature_template(
         &self,
@@ -44,12 +45,6 @@ pub trait Seeder {
         &self,
         project_dir: &Path,
         ui: UiChoice,
-        package_manager: PackageManager,
-    ) -> Result<()>;
-    fn apply_styles(
-        &self,
-        project_dir: &Path,
-        styles: StylesChoice,
         package_manager: PackageManager,
     ) -> Result<()>;
 }

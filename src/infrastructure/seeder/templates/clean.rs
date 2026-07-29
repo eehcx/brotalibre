@@ -1,15 +1,17 @@
 use std::path::Path;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use serde_json::json;
 
 use super::TemplateLoader;
+use crate::domain::styles_choice::StylesChoice;
 use crate::infrastructure::seeder::commands::write_file;
 
 pub(crate) fn apply_clean_architecture_template(
     template_base: &Path,
     project_dir: &Path,
     project_name: &str,
+    styles: StylesChoice,
 ) -> Result<()> {
     let app_dir = project_dir.join("src/app");
     if !app_dir.exists() {
@@ -19,7 +21,7 @@ pub(crate) fn apply_clean_architecture_template(
         );
     }
 
-    patch_app_component_for_clean(template_base, &app_dir, project_name)?;
+    patch_app_component_for_clean(template_base, &app_dir, project_name, styles)?;
     patch_app_config_for_clean(template_base, &app_dir)?;
 
     Ok(())
@@ -57,7 +59,17 @@ pub(crate) fn apply_clean_feature_template(
     let form_dir = presentation_dir.join("form");
     let detail_dir = presentation_dir.join("detail");
 
-    for dir in [&domain_dir, &vo_dir, &application_dir, &infra_dir, &mapper_dir, &dto_dir, &list_dir, &form_dir, &detail_dir] {
+    for dir in [
+        &domain_dir,
+        &vo_dir,
+        &application_dir,
+        &infra_dir,
+        &mapper_dir,
+        &dto_dir,
+        &list_dir,
+        &form_dir,
+        &detail_dir,
+    ] {
         std::fs::create_dir_all(dir)
             .with_context(|| format!("failed to create directory {}", dir.display()))?;
     }
@@ -70,11 +82,38 @@ pub(crate) fn apply_clean_feature_template(
         "fields": fields,
     });
 
-    write_file(&domain_dir.join(format!("{}.entity.ts", name_kebab)), &loader.render("architecture/clean/domain/{{ name }}.entity.ts.j2", ctx.clone())?)?;
-    write_file(&domain_dir.join(format!("{}-repository.port.ts", name_kebab)), &loader.render("architecture/clean/domain/{{ name }}-repository.port.ts.j2", ctx.clone())?)?;
-    write_file(&domain_dir.join(format!("{}.errors.ts", name_kebab)), &loader.render("architecture/clean/domain/{{ name }}.errors.ts.j2", ctx.clone())?)?;
-    write_file(&vo_dir.join(format!("{}-id.vo.ts", name_kebab)), &loader.render("architecture/clean/domain/value-objects/{{ name }}-id.vo.ts.j2", ctx.clone())?)?;
-    write_file(&application_dir.join(format!("{}.store.ts", name_kebab)), &loader.render("state/{{ name }}.store.ts.j2", ctx.clone())?)?;
+    write_file(
+        &domain_dir.join(format!("{}.entity.ts", name_kebab)),
+        &loader.render(
+            "architecture/clean/domain/{{ name }}.entity.ts.j2",
+            ctx.clone(),
+        )?,
+    )?;
+    write_file(
+        &domain_dir.join(format!("{}-repository.port.ts", name_kebab)),
+        &loader.render(
+            "architecture/clean/domain/{{ name }}-repository.port.ts.j2",
+            ctx.clone(),
+        )?,
+    )?;
+    write_file(
+        &domain_dir.join(format!("{}.errors.ts", name_kebab)),
+        &loader.render(
+            "architecture/clean/domain/{{ name }}.errors.ts.j2",
+            ctx.clone(),
+        )?,
+    )?;
+    write_file(
+        &vo_dir.join(format!("{}-id.vo.ts", name_kebab)),
+        &loader.render(
+            "architecture/clean/domain/value-objects/{{ name }}-id.vo.ts.j2",
+            ctx.clone(),
+        )?,
+    )?;
+    write_file(
+        &application_dir.join(format!("{}.store.ts", name_kebab)),
+        &loader.render("state/{{ name }}.store.ts.j2", ctx.clone())?,
+    )?;
 
     for action in &["GetAll", "GetById", "Create", "Update", "Delete"] {
         let action_ctx = json!({
@@ -83,14 +122,54 @@ pub(crate) fn apply_clean_feature_template(
             "name_snake": name_snake,
             "action": action,
         });
-        write_file(&application_dir.join(format!("{}-{}.use-case.ts", action.to_lowercase(), name_kebab)), &loader.render("architecture/clean/application/{{ action }}.use-case.ts.j2", action_ctx)?)?;
+        write_file(
+            &application_dir.join(format!(
+                "{}-{}.use-case.ts",
+                action.to_lowercase(),
+                name_kebab
+            )),
+            &loader.render(
+                "architecture/clean/application/{{ action }}.use-case.ts.j2",
+                action_ctx,
+            )?,
+        )?;
     }
 
-    write_file(&dto_dir.join(format!("{}.request.dto.ts", name_kebab)), &loader.render("architecture/clean/infrastructure/dto/{{ name }}.request.dto.ts.j2", ctx.clone())?)?;
-    write_file(&dto_dir.join(format!("{}.response.dto.ts", name_kebab)), &loader.render("architecture/clean/infrastructure/dto/{{ name }}.response.dto.ts.j2", ctx.clone())?)?;
-    write_file(&mapper_dir.join(format!("{}.mapper.ts", name_kebab)), &loader.render("architecture/clean/infrastructure/mappers/{{ name }}.mapper.ts.j2", ctx.clone())?)?;
-    write_file(&infra_dir.join(format!("{}.repository.ts", name_kebab)), &loader.render("architecture/clean/infrastructure/{{ name }}.repository.ts.j2", ctx.clone())?)?;
-    write_file(&infra_dir.join(format!("{}.provider.ts", name_kebab)), &loader.render("architecture/clean/infrastructure/{{ name }}.provider.ts.j2", ctx)?)?;
+    write_file(
+        &dto_dir.join(format!("{}.request.dto.ts", name_kebab)),
+        &loader.render(
+            "architecture/clean/infrastructure/dto/{{ name }}.request.dto.ts.j2",
+            ctx.clone(),
+        )?,
+    )?;
+    write_file(
+        &dto_dir.join(format!("{}.response.dto.ts", name_kebab)),
+        &loader.render(
+            "architecture/clean/infrastructure/dto/{{ name }}.response.dto.ts.j2",
+            ctx.clone(),
+        )?,
+    )?;
+    write_file(
+        &mapper_dir.join(format!("{}.mapper.ts", name_kebab)),
+        &loader.render(
+            "architecture/clean/infrastructure/mappers/{{ name }}.mapper.ts.j2",
+            ctx.clone(),
+        )?,
+    )?;
+    write_file(
+        &infra_dir.join(format!("{}.repository.ts", name_kebab)),
+        &loader.render(
+            "architecture/clean/infrastructure/{{ name }}.repository.ts.j2",
+            ctx.clone(),
+        )?,
+    )?;
+    write_file(
+        &infra_dir.join(format!("{}.provider.ts", name_kebab)),
+        &loader.render(
+            "architecture/clean/infrastructure/{{ name }}.provider.ts.j2",
+            ctx,
+        )?,
+    )?;
 
     Ok(())
 }
@@ -99,27 +178,27 @@ pub(crate) fn patch_app_component_for_clean(
     template_base: &Path,
     app_dir: &Path,
     project_name: &str,
+    styles: StylesChoice,
 ) -> Result<()> {
     let loader = TemplateLoader::new(template_base)?;
+    let ext = styles.file_extension();
+    let style_url = format!("./app.{}", ext);
 
-    let (app_ts, app_html, template_url, style_url, component_class) =
-        if app_dir.join("app.ts").exists() {
-            (
-                app_dir.join("app.ts"),
-                app_dir.join("app.html"),
-                "./app.html",
-                "./app.scss",
-                "App",
-            )
-        } else {
-            (
-                app_dir.join("app.component.ts"),
-                app_dir.join("app.component.html"),
-                "./app.component.html",
-                "./app.scss",
-                "AppComponent",
-            )
-        };
+    let (app_ts, app_html, template_url, component_class) = if app_dir.join("app.ts").exists() {
+        (
+            app_dir.join("app.ts"),
+            app_dir.join("app.html"),
+            "./app.html",
+            "App",
+        )
+    } else {
+        (
+            app_dir.join("app.component.ts"),
+            app_dir.join("app.component.html"),
+            "./app.component.html",
+            "AppComponent",
+        )
+    };
 
     let context = json!({
         "template_url": template_url,
@@ -163,21 +242,51 @@ mod tests {
 
     fn feature_files(feature_dir: &std::path::Path, name_kebab: &str) -> Vec<std::path::PathBuf> {
         vec![
-            feature_dir.join("domain").join(format!("{}.entity.ts", name_kebab)),
-            feature_dir.join("domain").join(format!("{}-repository.port.ts", name_kebab)),
-            feature_dir.join("domain").join(format!("{}.errors.ts", name_kebab)),
-            feature_dir.join("domain/value-objects").join(format!("{}-id.vo.ts", name_kebab)),
-            feature_dir.join("application").join(format!("{}.store.ts", name_kebab)),
-            feature_dir.join("application").join(format!("getall-{}.use-case.ts", name_kebab)),
-            feature_dir.join("application").join(format!("getbyid-{}.use-case.ts", name_kebab)),
-            feature_dir.join("application").join(format!("create-{}.use-case.ts", name_kebab)),
-            feature_dir.join("application").join(format!("update-{}.use-case.ts", name_kebab)),
-            feature_dir.join("application").join(format!("delete-{}.use-case.ts", name_kebab)),
-            feature_dir.join("infrastructure/dto").join(format!("{}.request.dto.ts", name_kebab)),
-            feature_dir.join("infrastructure/dto").join(format!("{}.response.dto.ts", name_kebab)),
-            feature_dir.join("infrastructure/mappers").join(format!("{}.mapper.ts", name_kebab)),
-            feature_dir.join("infrastructure").join(format!("{}.repository.ts", name_kebab)),
-            feature_dir.join("infrastructure").join(format!("{}.provider.ts", name_kebab)),
+            feature_dir
+                .join("domain")
+                .join(format!("{}.entity.ts", name_kebab)),
+            feature_dir
+                .join("domain")
+                .join(format!("{}-repository.port.ts", name_kebab)),
+            feature_dir
+                .join("domain")
+                .join(format!("{}.errors.ts", name_kebab)),
+            feature_dir
+                .join("domain/value-objects")
+                .join(format!("{}-id.vo.ts", name_kebab)),
+            feature_dir
+                .join("application")
+                .join(format!("{}.store.ts", name_kebab)),
+            feature_dir
+                .join("application")
+                .join(format!("getall-{}.use-case.ts", name_kebab)),
+            feature_dir
+                .join("application")
+                .join(format!("getbyid-{}.use-case.ts", name_kebab)),
+            feature_dir
+                .join("application")
+                .join(format!("create-{}.use-case.ts", name_kebab)),
+            feature_dir
+                .join("application")
+                .join(format!("update-{}.use-case.ts", name_kebab)),
+            feature_dir
+                .join("application")
+                .join(format!("delete-{}.use-case.ts", name_kebab)),
+            feature_dir
+                .join("infrastructure/dto")
+                .join(format!("{}.request.dto.ts", name_kebab)),
+            feature_dir
+                .join("infrastructure/dto")
+                .join(format!("{}.response.dto.ts", name_kebab)),
+            feature_dir
+                .join("infrastructure/mappers")
+                .join(format!("{}.mapper.ts", name_kebab)),
+            feature_dir
+                .join("infrastructure")
+                .join(format!("{}.repository.ts", name_kebab)),
+            feature_dir
+                .join("infrastructure")
+                .join(format!("{}.provider.ts", name_kebab)),
         ]
     }
 
@@ -188,11 +297,39 @@ mod tests {
         let app_dir = project_dir.join("src/app");
         create_app_dir(&app_dir);
 
-        apply_clean_architecture_template(&template_base(), &project_dir, "demo-app").unwrap();
+        apply_clean_architecture_template(
+            &template_base(),
+            &project_dir,
+            "demo-app",
+            StylesChoice::Css,
+        )
+        .unwrap();
 
         assert!(app_dir.join("app.ts").exists());
         assert!(app_dir.join("app.html").exists());
         assert!(app_dir.join("app.config.ts").exists());
+    }
+
+    #[test]
+    fn clean_template_uses_the_selected_style_file() {
+        let tmp = tempdir().unwrap();
+        let project_dir = tmp.path().join("demo");
+        let app_dir = project_dir.join("src/app");
+        create_app_dir(&app_dir);
+
+        for (styles, extension) in [
+            (StylesChoice::Css, "css"),
+            (StylesChoice::Scss, "scss"),
+            (StylesChoice::Sass, "sass"),
+            (StylesChoice::Less, "less"),
+            (StylesChoice::TailwindCSS, "css"),
+        ] {
+            apply_clean_architecture_template(&template_base(), &project_dir, "demo-app", styles)
+                .unwrap();
+
+            let rendered = fs::read_to_string(app_dir.join("app.ts")).unwrap();
+            assert!(rendered.contains(&format!("styleUrl: './app.{extension}'")));
+        }
     }
 
     #[test]
@@ -220,14 +357,7 @@ mod tests {
         let app_dir = tmp.path().join("src/app");
         create_app_dir(&app_dir);
 
-        apply_clean_feature_template(
-            &template_base(),
-            &app_dir,
-            "my-feature",
-            "api",
-            &[],
-        )
-        .unwrap();
+        apply_clean_feature_template(&template_base(), &app_dir, "my-feature", "api", &[]).unwrap();
 
         let files = feature_files(&app_dir, "my-feature");
         for f in &files {
@@ -244,6 +374,7 @@ mod tests {
             &template_base(),
             &tmp.path().join("demo"),
             "demo-app",
+            StylesChoice::Css,
         );
         assert!(result.is_err());
     }
@@ -276,13 +407,7 @@ mod tests {
         create_app_dir(&app_dir);
 
         let bad_base = tmp.path().join("no-templates");
-        let result = apply_clean_feature_template(
-            &bad_base,
-            &app_dir,
-            "user",
-            "api",
-            &[],
-        );
+        let result = apply_clean_feature_template(&bad_base, &app_dir, "user", "api", &[]);
         assert!(result.is_err());
     }
 }

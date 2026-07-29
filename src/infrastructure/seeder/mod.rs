@@ -4,7 +4,6 @@ use anyhow::{Context, Result};
 use serde_json::json;
 
 pub(crate) mod commands;
-pub(crate) mod styles;
 pub(crate) mod templates;
 pub(crate) mod ui_integration;
 
@@ -14,7 +13,6 @@ use crate::domain::project::PackageManager;
 use crate::domain::project::ResolvedOptions;
 use crate::domain::project::UiChoice;
 use crate::domain::styles_choice::StylesChoice;
-use crate::infrastructure::seeder::styles::apply_styles;
 use crate::infrastructure::seeder::ui_integration::apply_ui_integration;
 
 pub use self::commands::{CommandRunner, SystemCommandRunner};
@@ -37,6 +35,7 @@ impl Seeder for SystemSeeder {
         project_dir: &Path,
         architecture: ArchitectureProfile,
         project_name: &str,
+        styles: StylesChoice,
     ) -> Result<()> {
         let template_base = std::env::current_dir()
             .map(|p| p.join("templates").join("angular"))
@@ -45,20 +44,18 @@ impl Seeder for SystemSeeder {
         enable_strict_tsconfig(project_dir)?;
 
         match architecture {
-            ArchitectureProfile::Clean => {
-                templates::clean::apply_clean_architecture_template(
-                    &template_base,
-                    project_dir,
-                    project_name,
-                )
-            }
-            ArchitectureProfile::Ddd => {
-                templates::ddd::apply_ddd_architecture_template(
-                    &template_base,
-                    project_dir,
-                    project_name,
-                )
-            }
+            ArchitectureProfile::Clean => templates::clean::apply_clean_architecture_template(
+                &template_base,
+                project_dir,
+                project_name,
+                styles,
+            ),
+            ArchitectureProfile::Ddd => templates::ddd::apply_ddd_architecture_template(
+                &template_base,
+                project_dir,
+                project_name,
+                styles,
+            ),
         }
     }
 
@@ -86,24 +83,20 @@ impl Seeder for SystemSeeder {
             .collect();
 
         match architecture {
-            ArchitectureProfile::Clean => {
-                templates::clean::apply_clean_feature_template(
-                    &template_base,
-                    &project_dir.join("src/app"),
-                    name,
-                    prefix,
-                    &fields_json,
-                )
-            }
-            ArchitectureProfile::Ddd => {
-                templates::ddd::apply_ddd_feature_template(
-                    &template_base,
-                    &project_dir.join("src/app/features"),
-                    name,
-                    prefix,
-                    &fields_json,
-                )
-            }
+            ArchitectureProfile::Clean => templates::clean::apply_clean_feature_template(
+                &template_base,
+                &project_dir.join("src/app"),
+                name,
+                prefix,
+                &fields_json,
+            ),
+            ArchitectureProfile::Ddd => templates::ddd::apply_ddd_feature_template(
+                &template_base,
+                &project_dir.join("src/app/features"),
+                name,
+                prefix,
+                &fields_json,
+            ),
         }?;
 
         add_ngrx_deps_to_package_json(project_dir)?;
@@ -127,26 +120,6 @@ impl Seeder for SystemSeeder {
             &template_base,
             project_dir,
             ui,
-            package_manager,
-        )
-    }
-
-    fn apply_styles(
-        &self,
-        project_dir: &Path,
-        styles: StylesChoice,
-        package_manager: PackageManager,
-    ) -> Result<()> {
-        let template_base = std::env::current_dir()
-            .map(|p| p.join("templates").join("angular"))
-            .expect("Failed to get current directory");
-
-        let mut runner = SystemCommandRunner;
-        apply_styles(
-            &mut runner,
-            &template_base,
-            project_dir,
-            styles,
             package_manager,
         )
     }
@@ -177,8 +150,13 @@ fn enable_strict_tsconfig(project_dir: &Path) -> Result<()> {
     }
     let content = std::fs::read_to_string(&tsconfig_path)?;
     let clean = strip_json_comments(&content);
-    let mut json: serde_json::Value = serde_json::from_str(&clean)
-        .with_context(|| format!("failed to parse tsconfig at {}, first 100 chars: {:?}", tsconfig_path.display(), &clean[..clean.len().min(100)]))?;
+    let mut json: serde_json::Value = serde_json::from_str(&clean).with_context(|| {
+        format!(
+            "failed to parse tsconfig at {}, first 100 chars: {:?}",
+            tsconfig_path.display(),
+            &clean[..clean.len().min(100)]
+        )
+    })?;
     if let Some(opts) = json.get_mut("compilerOptions") {
         if let Some(obj) = opts.as_object_mut() {
             obj.insert("strict".to_string(), serde_json::Value::Bool(true));
@@ -304,35 +282,21 @@ mod tests {
     fn add_ngrx_deps_adds_packages() {
         let tmp = tempdir().unwrap();
         let pkg = tmp.path().join("package.json");
-        fs::write(
-            &pkg,
-            r#"{"dependencies": {"@angular/core": "^22.0.0"}}"#,
-        )
-        .unwrap();
+        fs::write(&pkg, r#"{"dependencies": {"@angular/core": "^22.0.0"}}"#).unwrap();
 
         add_ngrx_deps_to_package_json(tmp.path()).unwrap();
 
         let content: serde_json::Value =
             serde_json::from_str(&std::fs::read_to_string(&pkg).unwrap()).unwrap();
-        assert_eq!(
-            content["dependencies"]["@ngrx/signals"],
-            "^21.0.0"
-        );
-        assert_eq!(
-            content["dependencies"]["@ngrx/operators"],
-            "^21.0.0"
-        );
+        assert_eq!(content["dependencies"]["@ngrx/signals"], "^21.0.0");
+        assert_eq!(content["dependencies"]["@ngrx/operators"], "^21.0.0");
     }
 
     #[test]
     fn add_ngrx_deps_adds_overrides() {
         let tmp = tempdir().unwrap();
         let pkg = tmp.path().join("package.json");
-        fs::write(
-            &pkg,
-            r#"{"dependencies": {"@angular/core": "^22.0.0"}}"#,
-        )
-        .unwrap();
+        fs::write(&pkg, r#"{"dependencies": {"@angular/core": "^22.0.0"}}"#).unwrap();
 
         add_ngrx_deps_to_package_json(tmp.path()).unwrap();
 
@@ -357,10 +321,7 @@ mod tests {
 
         let content: serde_json::Value =
             serde_json::from_str(&std::fs::read_to_string(&pkg).unwrap()).unwrap();
-        assert_eq!(
-            content["dependencies"]["@ngrx/signals"],
-            "^19.0.0"
-        );
+        assert_eq!(content["dependencies"]["@ngrx/signals"], "^19.0.0");
     }
 
     #[test]
@@ -400,7 +361,11 @@ mod tests {
 
     #[test]
     fn parse_feature_fields_multiple_fields() {
-        let fields = vec!["name:string".to_string(), "age:number".to_string(), "active:boolean".to_string()];
+        let fields = vec![
+            "name:string".to_string(),
+            "age:number".to_string(),
+            "active:boolean".to_string(),
+        ];
         let result: Vec<serde_json::Value> = fields
             .iter()
             .map(|f| {
