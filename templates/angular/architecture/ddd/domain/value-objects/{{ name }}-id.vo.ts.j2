@@ -1,0 +1,22 @@
+export type {{ name }}Id = string & { readonly _brand: '{{ name }}Id' };
+
+function generateId(): string {
+  return crypto.randomUUID();
+}
+
+export const {{ name }}Id = {
+  generate(): {{ name }}Id {
+    return generateId() as {{ name }}Id;
+  },
+
+  from(value: string): {{ name }}Id {
+    if (!value) {
+      throw new Error('{{ name }}Id cannot be empty');
+    }
+    return value as {{ name }}Id;
+  },
+
+  equals(a: {{ name }}Id, b: {{ name }}Id): boolean {
+    return a === b;
+  },
+};

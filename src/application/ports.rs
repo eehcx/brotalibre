@@ -30,6 +30,19 @@ pub trait Seeder {
         &self,
         project_dir: &Path,
         architecture: ArchitectureProfile,
+        project_name: &str,
+        styles: StylesChoice,
+    ) -> Result<()>;
+    #[allow(clippy::too_many_arguments)]
+    fn apply_feature_template(
+        &self,
+        project_dir: &Path,
+        architecture: ArchitectureProfile,
+        name: &str,
+        prefix: &str,
+        fields: &[String],
+        ui: UiChoice,
+        styles: StylesChoice,
     ) -> Result<()>;
     fn apply_ui_integration(
         &self,
@@ -37,16 +50,10 @@ pub trait Seeder {
         ui: UiChoice,
         package_manager: PackageManager,
     ) -> Result<()>;
-    fn apply_styles(
-        &self,
-        project_dir: &Path,
-        styles: StylesChoice,
-        package_manager: PackageManager,
-    ) -> Result<()>;
 }
 
 pub trait ProgressReporter {
-    fn show_banner(&self);
+    //fn show_banner(&self);
     fn stage_start(&self, stage: &str, message: &str);
     fn stage_ok(&self, stage: &str, message: &str);
     fn stage_error(&self, stage: &str, message: &str);

@@ -1,0 +1,10 @@
+services:
+  {{ name_kebab }}:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "{{ port | default('4200') }}:80"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped

@@ -1,0 +1,25 @@
+import { Component, inject, OnInit } from '@angular/core';
+import { RouterModule } from '@angular/router';
+import { {{ name }}Store } from '../../application/{{ name_kebab }}.store';
+import { {{ name }}Id } from '../../domain/value-objects/{{ name_kebab }}-id.vo';
+
+@Component({
+  selector: 'app-{{ name_kebab }}-list',
+  imports: [RouterModule],
+  templateUrl: './{{ name_kebab }}-list.component.html',
+})
+export class {{ name }}ListComponent implements OnInit {
+  readonly #store = inject({{ name }}Store);
+
+  readonly items = this.#store.items;
+  readonly loading = this.#store.loading;
+  readonly error = this.#store.error;
+
+  ngOnInit(): void {
+    this.#store.loadAll();
+  }
+
+  onDelete(id: string): void {
+    this.#store.delete(id as {{ name }}Id);
+  }
+}

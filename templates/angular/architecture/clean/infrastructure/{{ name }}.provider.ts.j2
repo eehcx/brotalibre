@@ -1,0 +1,10 @@
+import { Provider } from '@angular/core';
+import { {{ name }}RepositoryPort } from '../domain/{{ name_kebab }}-repository.port';
+import { {{ name }}Repository } from './{{ name_kebab }}.repository';
+
+export const {{ name_snake | upper }}_PROVIDERS: Provider[] = [
+  {
+    provide: {{ name }}RepositoryPort,
+    useClass: {{ name }}Repository,
+  },
+];

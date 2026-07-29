@@ -1,0 +1,39 @@
+import { Component, inject, OnInit } from '@angular/core';
+import { TableModule } from 'primeng/table';
+import { ButtonModule } from 'primeng/button';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
+import { RouterModule } from '@angular/router';
+import { {{ name }}Store } from '../../application/{{ name_kebab }}.store';
+import { {{ name }}Id } from '../../domain/value-objects/{{ name_kebab }}-id.vo';
+
+@Component({
+  selector: 'app-{{ name_kebab }}-list',
+  imports: [TableModule, ButtonModule, ProgressSpinnerModule, ToastModule, RouterModule],
+  providers: [MessageService],
+  templateUrl: './{{ name_kebab }}-list.component.html',
+})
+export class {{ name }}ListComponent implements OnInit {
+  readonly #store = inject({{ name }}Store);
+  readonly #toast = inject(MessageService);
+
+  readonly items = this.#store.items;
+  readonly loading = this.#store.loading;
+  readonly error = this.#store.error;
+
+  readonly columns = [
+    {% for field in fields %}
+    { field: '{{ field.name }}', header: '{{ field.name | capitalize }}' },
+    {% endfor %}
+  ];
+
+  ngOnInit(): void {
+    this.#store.loadAll();
+  }
+
+  onDelete(id: string): void {
+    this.#store.delete(id as {{ name }}Id);
+    this.#toast.add({ severity: 'success', summary: 'Deleted', detail: 'Record removed' });
+  }
+}

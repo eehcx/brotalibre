@@ -7,6 +7,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::application::ports::ProgressReporter;
 use crate::domain::project::{ArchitectureProfile, PackageManager, ResolvedOptions, UiChoice};
+use crate::domain::styles_choice::StylesChoice;
 
 pub struct ConsoleProgressReporter {
     spinner: Mutex<Option<ProgressBar>>,
@@ -21,7 +22,7 @@ impl Default for ConsoleProgressReporter {
 }
 
 impl ProgressReporter for ConsoleProgressReporter {
-    fn show_banner(&self) {
+    /*fn show_banner(&self) {
         println!(
             "{}",
             style(" _   _  ____ ____  _____ _____ ____  ").cyan().bold()
@@ -52,7 +53,7 @@ impl ProgressReporter for ConsoleProgressReporter {
         );
         println!("{}", style("Angular project bootstrap CLI").dim());
         println!();
-    }
+    }*/
 
     fn stage_start(&self, stage: &str, message: &str) {
         let spinner = ProgressBar::new_spinner();
@@ -132,10 +133,17 @@ impl ProgressReporter for ConsoleProgressReporter {
             style("skip install:").bold(),
             style(if options.skip_install { "yes" } else { "no" }).yellow()
         );
+        println!(
+            "{} {}",
+            style("styles:").bold(),
+            style(styles_label(options.styles)).yellow()
+        );
         println!();
-        println!("{}", style("next steps").bold());
+        println!("{}", style("next steps:").bold());
         println!("  cd {}", project_name);
-        println!("  {} start", package_manager_label(options.package_manager));
+        println!("  ng serve (recommended)");
+        //println!("  {} start or ng serve (recommended)", package_manager_label(options.package_manager));
+        //println!("  ng serve (recommended)");
     }
 }
 
@@ -159,6 +167,16 @@ fn package_manager_label(pm: PackageManager) -> &'static str {
 fn architecture_label(profile: ArchitectureProfile) -> &'static str {
     match profile {
         ArchitectureProfile::Clean => "clean",
-        ArchitectureProfile::Cdp => "cdp",
+        ArchitectureProfile::Ddd => "ddd",
+    }
+}
+
+fn styles_label(styles: StylesChoice) -> &'static str {
+    match styles {
+        StylesChoice::Css => "css",
+        StylesChoice::Scss => "scss",
+        StylesChoice::Sass => "sass",
+        StylesChoice::Less => "less",
+        StylesChoice::TailwindCSS => "tailwindcss",
     }
 }

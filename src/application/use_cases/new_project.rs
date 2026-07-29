@@ -34,17 +34,10 @@ impl<'a> NewProjectUseCase<'a> {
     }
 
     pub fn execute(&self, request: NewProjectRequest) -> Result<()> {
-        let options = self.resolve_options(
-            request.ui,
-            request.package_manager,
-            request.styles,
-            request.architecture,
-            request.skip_install,
-            request.yes,
-        )?;
+        let options = self.resolve_options(&request)?;
 
         if !request.yes && !self.env.is_ci() && self.env.is_interactive_terminal() {
-            self.reporter.show_banner();
+            //self.reporter.show_banner();
         }
 
         self.reporter
@@ -81,16 +74,42 @@ impl<'a> NewProjectUseCase<'a> {
 
         self.reporter
             .stage_start("template", "applying architecture template");
-        if let Err(err) = self
-            .seeder
-            .apply_architecture_template(&absolute_project_dir, options.architecture)
-        {
+        if let Err(err) = self.seeder.apply_architecture_template(
+            &absolute_project_dir,
+            options.architecture,
+            &request.project_name,
+            options.styles,
+        ) {
             self.reporter
                 .stage_error("template", "template setup failed");
             return Err(err);
         }
         self.reporter
             .stage_ok("template", "architecture template applied");
+
+        self.reporter
+            .stage_start("feature", "creating the default users feature");
+        let default_user_fields = [
+            "name:string",
+            "email:string",
+            "role:string",
+            "createdAt:string",
+        ];
+        if let Err(err) = self.seeder.apply_feature_template(
+            &absolute_project_dir,
+            options.architecture,
+            "users",
+            "api/users",
+            &default_user_fields.map(String::from),
+            options.ui,
+            options.styles,
+        ) {
+            self.reporter
+                .stage_error("feature", "default users feature failed");
+            return Err(err);
+        }
+        self.reporter
+            .stage_ok("feature", "default users feature created");
 
         self.reporter
             .stage_start("ui setup", "applying selected UI integration");
@@ -106,67 +125,47 @@ impl<'a> NewProjectUseCase<'a> {
         self.reporter
             .stage_ok("ui setup", "UI integration completed");
 
-        if options.styles != StylesChoice::None {
-            self.reporter.stage_start("styles", "applying styles setup");
-            if let Err(err) = self.seeder.apply_styles(
-                &absolute_project_dir,
-                options.styles,
-                options.package_manager,
-            ) {
-                self.reporter.stage_error("styles", "styles setup failed");
-                return Err(err);
-            }
-            self.reporter.stage_ok("styles", "styles setup completed");
-        }
-
         self.reporter
             .summary(&request.project_name, &absolute_project_dir, options);
 
         Ok(())
     }
 
-    fn resolve_options(
-        &self,
-        cli_ui: Option<UiChoice>,
-        cli_package_manager: Option<PackageManager>,
-        cli_styles: Option<StylesChoice>,
-        cli_architecture: Option<ArchitectureProfile>,
-        skip_install: bool,
-        yes: bool,
-    ) -> Result<ResolvedOptions> {
-        let package_manager = if let Some(value) = cli_package_manager {
+    fn resolve_options(&self, request: &NewProjectRequest) -> Result<ResolvedOptions> {
+        let package_manager = if let Some(value) = request.package_manager {
             value
-        } else if yes {
+        } else if request.yes {
             PackageManager::Npm
         } else {
             self.ui_selector.select_package_manager()?
         };
 
-        let architecture = if let Some(value) = cli_architecture {
+        let architecture = if let Some(value) = request.architecture {
             value
-        } else if yes {
+        } else if request.yes {
             ArchitectureProfile::Clean
         } else {
             self.ui_selector.select_architecture()?
         };
 
-        if yes {
+        if request.yes {
             return Ok(ResolvedOptions {
-                ui: cli_ui.unwrap_or(UiChoice::None),
-                styles: cli_styles.unwrap_or(StylesChoice::None),
+                ui: request.ui.unwrap_or(UiChoice::None),
+                styles: request.styles.unwrap_or(StylesChoice::Css),
                 package_manager,
                 architecture,
-                skip_install,
+                skip_install: request.skip_install,
+                skip_git: request.skip_git,
             });
         }
 
-        let ui = if let Some(value) = cli_ui {
+        let ui = if let Some(value) = request.ui {
             value
         } else {
             self.ui_selector.select_ui()?
         };
 
-        let styles = if let Some(value) = cli_styles {
+        let styles = if let Some(value) = request.styles {
             value
         } else {
             self.ui_selector.select_styles()?
@@ -177,7 +176,8 @@ impl<'a> NewProjectUseCase<'a> {
             styles,
             package_manager,
             architecture,
-            skip_install,
+            skip_install: request.skip_install,
+            skip_git: request.skip_git,
         })
     }
 }
@@ -270,10 +270,28 @@ mod tests {
             &self,
             _project_dir: &Path,
             _architecture: ArchitectureProfile,
+            _project_name: &str,
+            _styles: StylesChoice,
         ) -> Result<()> {
             self.calls
                 .borrow_mut()
                 .push("apply_architecture_template".to_string());
+            Ok(())
+        }
+
+        fn apply_feature_template(
+            &self,
+            _project_dir: &Path,
+            _architecture: ArchitectureProfile,
+            _name: &str,
+            _prefix: &str,
+            _fields: &[String],
+            _ui: UiChoice,
+            _styles: StylesChoice,
+        ) -> Result<()> {
+            self.calls
+                .borrow_mut()
+                .push("apply_feature_template".to_string());
             Ok(())
         }
 
@@ -288,23 +306,13 @@ mod tests {
                 .push("apply_ui_integration".to_string());
             Ok(())
         }
-
-        fn apply_styles(
-            &self,
-            _project_dir: &Path,
-            _styles: StylesChoice,
-            _package_manager: PackageManager,
-        ) -> Result<()> {
-            self.calls.borrow_mut().push("apply_styles".to_string());
-            Ok(())
-        }
     }
 
     #[derive(Default)]
     struct FakeReporter;
 
     impl ProgressReporter for FakeReporter {
-        fn show_banner(&self) {}
+        //fn show_banner(&self) {}
         fn stage_start(&self, _stage: &str, _message: &str) {}
         fn stage_ok(&self, _stage: &str, _message: &str) {}
         fn stage_error(&self, _stage: &str, _message: &str) {}
@@ -319,7 +327,7 @@ mod tests {
         };
         let ui_selector = FakeUiSelector {
             ui: UiChoice::None,
-            styles: StylesChoice::None,
+            styles: StylesChoice::Css,
         };
         let seeder = FakeSeeder::default();
         let reporter = FakeReporter;
@@ -333,6 +341,7 @@ mod tests {
                 package_manager: Some(PackageManager::Npm),
                 architecture: Some(ArchitectureProfile::Clean),
                 skip_install: true,
+                skip_git: false,
                 yes: true,
             })
             .unwrap();
@@ -343,6 +352,7 @@ mod tests {
                 "ensure_required_tools",
                 "scaffold_angular_project",
                 "apply_architecture_template",
+                "apply_feature_template",
                 "apply_ui_integration"
             ]
         );

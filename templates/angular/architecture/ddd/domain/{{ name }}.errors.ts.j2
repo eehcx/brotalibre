@@ -1,0 +1,61 @@
+import type { {{ name }}Props } from './{{ name_kebab }}.entity';
+
+export abstract class {{ name }}Error extends Error {
+  abstract readonly code: string;
+
+  constructor(message: string) {
+    super(message);
+    this.name = this.constructor.name;
+  }
+}
+
+export class {{ name }}NotFoundError extends {{ name }}Error {
+  readonly code = '{{ name | upper }}_NOT_FOUND';
+
+  constructor(id: string) {
+    super(`{{ name }} with id '${id}' not found`);
+  }
+}
+
+export class {{ name }}ValidationError extends {{ name }}Error {
+  readonly code = '{{ name | upper }}_VALIDATION_ERROR';
+
+  constructor(public readonly errors: string[]) {
+    super(`{{ name }} validation failed: ${errors.join(', ')}`);
+  }
+}
+
+export class {{ name }}DuplicateError extends {{ name }}Error {
+  readonly code = '{{ name | upper }}_DUPLICATE';
+
+  constructor(field: string, value: string) {
+    super(`{{ name }} with ${field} '${value}' already exists`);
+  }
+}
+
+export type {{ name }}ValidationResult = string[];
+
+export const {{ name }}Validator = {
+  validate(props: {{ name }}Props): string[] {
+    const errors: string[] = [];
+{% for field in fields %}
+    if (props.{{ field.name }} === undefined || props.{{ field.name }} === null) {
+      errors.push('{{ field.name }} is required');
+    }
+{% if field.type == 'string' %}
+    if (props.{{ field.name }} !== undefined && typeof props.{{ field.name }} !== 'string') {
+      errors.push('{{ field.name }} must be a string');
+    }
+{% elif field.type == 'number' %}
+    if (props.{{ field.name }} !== undefined && (typeof props.{{ field.name }} !== 'number' || isNaN(props.{{ field.name }}))) {
+      errors.push('{{ field.name }} must be a number');
+    }
+{% elif field.type == 'email' %}
+    if (props.{{ field.name }} !== undefined && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(props.{{ field.name }})) {
+      errors.push('{{ field.name }} must be a valid email');
+    }
+{% endif %}
+{% endfor %}
+    return errors;
+  },
+};

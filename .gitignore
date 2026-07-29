@@ -1,4 +1,10 @@
 /target
 /openspec
+.engram/
 .vscode
 .idea
+.atl
+
+
+#Test examples
+/my-app

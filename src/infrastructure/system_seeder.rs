@@ -29,7 +29,24 @@ pub struct TemplateLoader {
 impl TemplateLoader {
     pub fn new() -> Result<Self> {
         let mut env = Environment::new();
-        let templates_dir = std::env::current_dir()?.join("templates").join("angular");
+
+        // Try to find templates relative to current exe first
+        // Fall back to current working directory for development
+        let templates_dir = if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                let templates = exe_dir.join("templates").join("angular");
+                if templates.exists() {
+                    templates
+                } else {
+                    std::env::current_dir()?.join("templates").join("angular")
+                }
+            } else {
+                std::env::current_dir()?.join("templates").join("angular")
+            }
+        } else {
+            std::env::current_dir()?.join("templates").join("angular")
+        };
+
         env.set_loader(minijinja::path_loader(templates_dir));
         Ok(Self { env })
     }

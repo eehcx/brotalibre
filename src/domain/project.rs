@@ -18,7 +18,7 @@ pub enum PackageManager {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ArchitectureProfile {
     Clean,
-    Cdp,
+    Ddd,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -28,6 +28,7 @@ pub struct ResolvedOptions {
     pub package_manager: PackageManager,
     pub architecture: ArchitectureProfile,
     pub skip_install: bool,
+    pub skip_git: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -38,5 +39,17 @@ pub struct NewProjectRequest {
     pub package_manager: Option<PackageManager>,
     pub architecture: Option<ArchitectureProfile>,
     pub skip_install: bool,
+    pub skip_git: bool,
     pub yes: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct GenerateFeatureRequest {
+    pub project_dir: String,
+    pub name: String,
+    pub ui: Option<UiChoice>,
+    pub styles: Option<StylesChoice>,
+    pub architecture: ArchitectureProfile,
+    pub prefix: String,
+    pub fields: Vec<String>,
 }

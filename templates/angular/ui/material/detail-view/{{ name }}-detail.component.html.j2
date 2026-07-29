@@ -1,0 +1,33 @@
+@if (loading()) {
+  <div class="spinner-wrapper">
+    <mat-spinner diameter="48" />
+  </div>
+}
+
+@if (error()) {
+  <p class="error-message">{% raw %}{{ error() }}{% endraw %}</p>
+}
+
+@if (!loading() && item()) {
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>{{ name }} Detail</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      {% for field in fields %}
+      <div class="field-row">
+        <span class="field-label">{{ field.name | capitalize }}</span>
+        <span class="field-value">{% raw %}{{ item()?.{% endraw %}{{ field.name }}{% raw %} }}{% endraw %}</span>
+      </div>
+      {% endfor %}
+    </mat-card-content>
+
+    <mat-card-actions>
+      <button mat-stroked-button routerLink="../">Back</button>
+      <button mat-flat-button color="primary" [routerLink]="['../', id(), 'edit']">
+        <mat-icon>edit</mat-icon> Edit
+      </button>
+    </mat-card-actions>
+  </mat-card>
+}

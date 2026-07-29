@@ -1,0 +1,46 @@
+import { Component, inject, OnInit } from '@angular/core';
+import { MatTableModule } from '@angular/material/table';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { RouterModule } from '@angular/router';
+import { {{ name }}Store } from '../../application/{{ name_kebab }}.store';
+import { {{ name }}Id } from '../../domain/value-objects/{{ name_kebab }}-id.vo';
+
+@Component({
+  selector: 'app-{{ name_kebab }}-list',
+  imports: [
+    MatTableModule,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
+    RouterModule,
+  ],
+  templateUrl: './{{ name_kebab }}-list.component.html',
+})
+export class {{ name }}ListComponent implements OnInit {
+  readonly #store = inject({{ name }}Store);
+  readonly #snackBar = inject(MatSnackBar);
+
+  readonly items = this.#store.items;
+  readonly loading = this.#store.loading;
+  readonly error = this.#store.error;
+
+  readonly displayedColumns: string[] = [
+    {% for field in fields %}
+    '{{ field.name }}',
+    {% endfor %}
+    'actions',
+  ];
+
+  ngOnInit(): void {
+    this.#store.loadAll();
+  }
+
+  onDelete(id: string): void {
+    this.#store.delete(id as {{ name }}Id);
+    this.#snackBar.open('Deleted successfully', 'Close', { duration: 3000 });
+  }
+}

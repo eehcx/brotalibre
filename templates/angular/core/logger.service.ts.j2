@@ -1,0 +1,25 @@
+import { Injectable } from '@angular/core';
+import { environment } from '../environments/environment';
+
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+@Injectable({ providedIn: 'root' })
+export class LoggerService {
+  private readonly isDev = !environment.production;
+
+  debug(message: string, ...args: unknown[]): void {
+    if (this.isDev) console.debug(`[DEBUG] ${message}`, ...args);
+  }
+
+  info(message: string, ...args: unknown[]): void {
+    if (this.isDev) console.info(`[INFO] ${message}`, ...args);
+  }
+
+  warn(message: string, ...args: unknown[]): void {
+    console.warn(`[WARN] ${message}`, ...args);
+  }
+
+  error(message: string, ...args: unknown[]): void {
+    console.error(`[ERROR] ${message}`, ...args);
+  }
+}
