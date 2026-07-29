@@ -1,26 +1,25 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { {{ name }}Facade } from '../../_shared/facade/{{ name_kebab }}.facade';
-import { {{ name }}Model } from '../../../core/models/{{ name_kebab }}.model';
+import { {{ name }}Store } from '../../application/{{ name_kebab }}.store';
+import { {{ name }}Id } from '../../domain/value-objects/{{ name_kebab }}-id.vo';
 
 @Component({
   selector: 'app-{{ name_kebab }}-list',
-  standalone: true,
   imports: [RouterModule],
   templateUrl: './{{ name_kebab }}-list.component.html',
 })
 export class {{ name }}ListComponent implements OnInit {
-  readonly #facade = inject({{ name }}Facade);
+  readonly #store = inject({{ name }}Store);
 
-  readonly items = this.#facade.items;
-  readonly loading = this.#facade.loading;
-  readonly error = this.#facade.error;
+  readonly items = this.#store.items;
+  readonly loading = this.#store.loading;
+  readonly error = this.#store.error;
 
   ngOnInit(): void {
-    this.#facade.loadAll();
+    this.#store.loadAll();
   }
 
   onDelete(id: string): void {
-    this.#facade.delete(id);
+    this.#store.delete(id as {{ name }}Id);
   }
 }

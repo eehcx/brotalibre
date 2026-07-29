@@ -6,6 +6,11 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use include_dir::{Dir, include_dir};
 use minijinja::Environment;
+use serde_json::Value;
+
+use crate::domain::project::UiChoice;
+use crate::domain::styles_choice::StylesChoice;
+use crate::infrastructure::seeder::commands::write_file;
 
 static ANGULAR_TEMPLATES: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/templates/angular");
 
@@ -43,6 +48,42 @@ impl TemplateLoader {
             .render(context)
             .with_context(|| format!("failed to render template {}", template_name))
     }
+}
+
+pub(crate) fn render_feature_presentation(
+    loader: &TemplateLoader,
+    feature_dir: &Path,
+    name_kebab: &str,
+    context: &Value,
+    ui: UiChoice,
+    styles: StylesChoice,
+) -> Result<()> {
+    if ui == UiChoice::None && styles != StylesChoice::TailwindCSS {
+        return Ok(());
+    }
+    let ui_path = match ui {
+        UiChoice::Material => "material",
+        UiChoice::Primeng => "primeng",
+        UiChoice::None => "tailwindcss",
+    };
+    for (view, suffix) in [("list", "list"), ("form", "form"), ("detail", "detail")] {
+        let target_dir = feature_dir.join("presentation").join(view);
+        write_file(
+            &target_dir.join(format!("{name_kebab}-{suffix}.component.ts")),
+            &loader.render(
+                &format!("ui/{ui_path}/{view}-view/{{{{ name }}}}-{suffix}.component.ts.j2"),
+                context,
+            )?,
+        )?;
+        write_file(
+            &target_dir.join(format!("{name_kebab}-{suffix}.component.html")),
+            &loader.render(
+                &format!("ui/{ui_path}/{view}-view/{{{{ name }}}}-{suffix}.component.html.j2"),
+                context,
+            )?,
+        )?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]

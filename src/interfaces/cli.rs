@@ -44,6 +44,12 @@ struct GenerateFeatureCommand {
     name: String,
 
     #[arg(long, value_enum)]
+    ui: Option<CliUiChoice>,
+
+    #[arg(long, value_enum)]
+    styles: Option<CliStylesChoice>,
+
+    #[arg(long, value_enum)]
     architecture: Option<CliArchitectureProfile>,
 
     #[arg(long, default_value = "api")]
@@ -153,6 +159,8 @@ fn map_cli_to_command(cli: Cli) -> AppCommand {
                 AppCommand::GenerateFeature(GenerateFeatureRequest {
                     project_dir,
                     name: sub.name,
+                    ui: sub.ui.map(Into::into),
+                    styles: sub.styles.map(Into::into),
                     architecture: sub
                         .architecture
                         .map_or(ArchitectureProfile::Clean, Into::into),

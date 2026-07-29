@@ -245,7 +245,7 @@ validate_feature() {
 
   local base
   case "$arch" in
-    clean) base="$dir/src/app" ;;
+    clean) base="$dir/src/app/$feature" ;;
     ddd)   base="$dir/src/app/features/$feature" ;;
   esac
 

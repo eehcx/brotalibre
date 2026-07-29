@@ -4,6 +4,7 @@ use anyhow::{Context, Result, bail};
 use serde_json::json;
 
 use super::TemplateLoader;
+use crate::domain::project::UiChoice;
 use crate::domain::styles_choice::StylesChoice;
 use crate::infrastructure::seeder::commands::write_file;
 
@@ -37,6 +38,8 @@ pub(crate) fn apply_ddd_feature_template(
     name: &str,
     prefix: &str,
     fields: &[serde_json::Value],
+    ui: UiChoice,
+    styles: StylesChoice,
 ) -> Result<()> {
     let loader = TemplateLoader::new(template_base)?;
     let name_kebab = name.to_string().to_lowercase().replace(' ', "-");
@@ -84,6 +87,7 @@ pub(crate) fn apply_ddd_feature_template(
         "name_kebab": name_kebab,
         "name_snake": name_snake,
         "prefix": prefix,
+        "route": name_kebab,
         "fields": fields,
     });
 
@@ -169,12 +173,21 @@ pub(crate) fn apply_ddd_feature_template(
         )?,
     )?;
     write_file(
+        &infra_dir.join(format!("{}.mock.ts", name_kebab)),
+        &loader.render(
+            "architecture/ddd/infrastructure/{{ name }}.mock.ts.j2",
+            ctx.clone(),
+        )?,
+    )?;
+    write_file(
         &infra_dir.join(format!("{}.provider.ts", name_kebab)),
         &loader.render(
             "architecture/ddd/infrastructure/{{ name }}.provider.ts.j2",
-            ctx,
+            ctx.clone(),
         )?,
     )?;
+
+    super::render_feature_presentation(&loader, &feature_dir, &name_kebab, &ctx, ui, styles)?;
 
     Ok(())
 }
@@ -355,14 +368,32 @@ mod tests {
             serde_json::json!({"name": "email", "type": "string"}),
             serde_json::json!({"name": "age", "type": "number"}),
         ];
-        apply_ddd_feature_template(&template_base(), &features_dir, "user", "api", &fields)
-            .unwrap();
+        apply_ddd_feature_template(
+            &template_base(),
+            &features_dir,
+            "user",
+            "api",
+            &fields,
+            UiChoice::Material,
+            StylesChoice::Css,
+        )
+        .unwrap();
 
         let files = feature_files(&features_dir, "user");
         for f in &files {
             assert!(f.exists(), "missing file: {}", f.display());
         }
         assert_eq!(files.len(), 15);
+        assert!(
+            features_dir
+                .join("user/infrastructure/user.mock.ts")
+                .exists()
+        );
+        assert!(
+            features_dir
+                .join("user/presentation/list/user-list.component.ts")
+                .exists()
+        );
     }
 
     #[test]
@@ -380,8 +411,16 @@ mod tests {
         .unwrap();
 
         let features_dir = app_dir.join("features");
-        apply_ddd_feature_template(&template_base(), &features_dir, "my-feature", "api", &[])
-            .unwrap();
+        apply_ddd_feature_template(
+            &template_base(),
+            &features_dir,
+            "my-feature",
+            "api",
+            &[],
+            UiChoice::None,
+            StylesChoice::Css,
+        )
+        .unwrap();
 
         let files = feature_files(&features_dir, "my-feature");
         for f in &files {
@@ -423,6 +462,8 @@ mod tests {
             "shopping cart",
             "api",
             &[serde_json::json!({"name": "items", "type": "string"})],
+            UiChoice::None,
+            StylesChoice::Css,
         )
         .unwrap();
 
@@ -447,8 +488,16 @@ mod tests {
         .unwrap();
 
         let bad_base = tmp.path().join("no-templates");
-        apply_ddd_feature_template(&bad_base, &app_dir.join("features"), "user", "api", &[])
-            .unwrap();
+        apply_ddd_feature_template(
+            &bad_base,
+            &app_dir.join("features"),
+            "user",
+            "api",
+            &[],
+            UiChoice::None,
+            StylesChoice::Css,
+        )
+        .unwrap();
 
         assert!(app_dir.join("features/user/domain/user.entity.ts").exists());
     }

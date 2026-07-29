@@ -5,6 +5,7 @@ use anyhow::Result;
 use crate::application::ports::ProgressReporter;
 use crate::application::ports::Seeder;
 use crate::domain::project::GenerateFeatureRequest;
+use crate::domain::styles_choice::StylesChoice;
 
 pub struct GenerateFeatureUseCase<'a> {
     seeder: &'a dyn Seeder,
@@ -28,6 +29,8 @@ impl<'a> GenerateFeatureUseCase<'a> {
             &request.name,
             &request.prefix,
             &request.fields,
+            request.ui.unwrap_or(crate::domain::project::UiChoice::None),
+            request.styles.unwrap_or(StylesChoice::Css),
         )?;
 
         self.reporter

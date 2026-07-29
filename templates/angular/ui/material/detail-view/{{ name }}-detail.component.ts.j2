@@ -4,11 +4,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { RouterModule } from '@angular/router';
-import { {{ name }}Facade } from '../../_shared/facade/{{ name_kebab }}.facade';
+import { {{ name }}Store } from '../../application/{{ name_kebab }}.store';
+import { {{ name }}Id } from '../../domain/value-objects/{{ name_kebab }}-id.vo';
 
 @Component({
   selector: 'app-{{ name_kebab }}-detail',
-  standalone: true,
   imports: [
     MatCardModule,
     MatButtonModule,
@@ -21,13 +21,13 @@ import { {{ name }}Facade } from '../../_shared/facade/{{ name_kebab }}.facade';
 export class {{ name }}DetailComponent implements OnInit {
   readonly id = input.required<string>();
 
-  readonly #facade = inject({{ name }}Facade);
+  readonly #store = inject({{ name }}Store);
 
-  readonly item = this.#facade.selected;
-  readonly loading = this.#facade.loading;
-  readonly error = this.#facade.error;
+  readonly item = this.#store.selected;
+  readonly loading = this.#store.loading;
+  readonly error = this.#store.error;
 
   ngOnInit(): void {
-    this.#facade.loadById(this.id());
+    this.#store.loadById({{ name }}Id.from(this.id()));
   }
 }

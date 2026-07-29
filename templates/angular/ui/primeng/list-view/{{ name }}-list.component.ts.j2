@@ -5,22 +5,22 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { RouterModule } from '@angular/router';
-import { {{ name }}Facade } from '../../_shared/facade/{{ name_kebab }}.facade';
+import { {{ name }}Store } from '../../application/{{ name_kebab }}.store';
+import { {{ name }}Id } from '../../domain/value-objects/{{ name_kebab }}-id.vo';
 
 @Component({
   selector: 'app-{{ name_kebab }}-list',
-  standalone: true,
   imports: [TableModule, ButtonModule, ProgressSpinnerModule, ToastModule, RouterModule],
   providers: [MessageService],
   templateUrl: './{{ name_kebab }}-list.component.html',
 })
 export class {{ name }}ListComponent implements OnInit {
-  readonly #facade = inject({{ name }}Facade);
+  readonly #store = inject({{ name }}Store);
   readonly #toast = inject(MessageService);
 
-  readonly items = this.#facade.items;
-  readonly loading = this.#facade.loading;
-  readonly error = this.#facade.error;
+  readonly items = this.#store.items;
+  readonly loading = this.#store.loading;
+  readonly error = this.#store.error;
 
   readonly columns = [
     {% for field in fields %}
@@ -29,11 +29,11 @@ export class {{ name }}ListComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    this.#facade.loadAll();
+    this.#store.loadAll();
   }
 
   onDelete(id: string): void {
-    this.#facade.delete(id);
+    this.#store.delete(id as {{ name }}Id);
     this.#toast.add({ severity: 'success', summary: 'Deleted', detail: 'Record removed' });
   }
 }

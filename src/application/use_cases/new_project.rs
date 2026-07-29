@@ -88,6 +88,30 @@ impl<'a> NewProjectUseCase<'a> {
             .stage_ok("template", "architecture template applied");
 
         self.reporter
+            .stage_start("feature", "creating the default users feature");
+        let default_user_fields = [
+            "name:string",
+            "email:string",
+            "role:string",
+            "createdAt:string",
+        ];
+        if let Err(err) = self.seeder.apply_feature_template(
+            &absolute_project_dir,
+            options.architecture,
+            "users",
+            "api/users",
+            &default_user_fields.map(String::from),
+            options.ui,
+            options.styles,
+        ) {
+            self.reporter
+                .stage_error("feature", "default users feature failed");
+            return Err(err);
+        }
+        self.reporter
+            .stage_ok("feature", "default users feature created");
+
+        self.reporter
             .stage_start("ui setup", "applying selected UI integration");
         if let Err(err) = self.seeder.apply_ui_integration(
             &absolute_project_dir,
@@ -262,6 +286,8 @@ mod tests {
             _name: &str,
             _prefix: &str,
             _fields: &[String],
+            _ui: UiChoice,
+            _styles: StylesChoice,
         ) -> Result<()> {
             self.calls
                 .borrow_mut()
@@ -326,6 +352,7 @@ mod tests {
                 "ensure_required_tools",
                 "scaffold_angular_project",
                 "apply_architecture_template",
+                "apply_feature_template",
                 "apply_ui_integration"
             ]
         );

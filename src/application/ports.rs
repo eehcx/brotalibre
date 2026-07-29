@@ -33,6 +33,7 @@ pub trait Seeder {
         project_name: &str,
         styles: StylesChoice,
     ) -> Result<()>;
+    #[allow(clippy::too_many_arguments)]
     fn apply_feature_template(
         &self,
         project_dir: &Path,
@@ -40,6 +41,8 @@ pub trait Seeder {
         name: &str,
         prefix: &str,
         fields: &[String],
+        ui: UiChoice,
+        styles: StylesChoice,
     ) -> Result<()>;
     fn apply_ui_integration(
         &self,

@@ -1,15 +1,15 @@
-import { Component, inject, OnInit, input } from '@angular/core';
+import { Component, effect, inject, OnInit, input } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Router } from '@angular/router';
-import { {{ name }}Facade } from '../../_shared/facade/{{ name_kebab }}.facade';
+import { {{ name }}Store } from '../../application/{{ name_kebab }}.store';
+import { {{ name }}Id } from '../../domain/value-objects/{{ name_kebab }}-id.vo';
 
 @Component({
   selector: 'app-{{ name_kebab }}-form',
-  standalone: true,
   imports: [
     ReactiveFormsModule,
     MatFormFieldModule,
@@ -22,12 +22,12 @@ import { {{ name }}Facade } from '../../_shared/facade/{{ name_kebab }}.facade';
 export class {{ name }}FormComponent implements OnInit {
   readonly id = input<string | null>(null);
 
-  readonly #facade = inject({{ name }}Facade);
+  readonly #store = inject({{ name }}Store);
   readonly #fb = inject(FormBuilder);
   readonly #router = inject(Router);
 
-  readonly loading = this.#facade.loading;
-  readonly selected = this.#facade.selected;
+  readonly loading = this.#store.loading;
+  readonly selected = this.#store.selected;
 
   readonly form = this.#fb.group({
     {% for field in fields %}
@@ -38,29 +38,31 @@ export class {{ name }}FormComponent implements OnInit {
     {% endfor %}
   });
 
-  ngOnInit(): void {
-    if (this.id()) {
-      this.#facade.loadById(this.id()!);
-    }
+  constructor() {
+    effect(() => {
+      const item = this.selected();
+      if (item) this.form.patchValue(item as any);
+    });
   }
 
-  ngOnChanges(): void {
-    const item = this.selected();
-    if (item) this.form.patchValue(item);
+  ngOnInit(): void {
+    if (this.id()) {
+      this.#store.loadById({{ name }}Id.from(this.id()!));
+    }
   }
 
   onSubmit(): void {
     if (this.form.invalid) return;
     const value = this.form.getRawValue();
     if (this.id()) {
-      this.#facade.update(this.id()!, value);
+      this.#store.update({ id: {{ name }}Id.from(this.id()!), ...value } as any);
     } else {
-      this.#facade.create(value);
+      this.#store.create(value as any);
     }
-    this.#router.navigate(['{{ prefix }}']);
+    this.#router.navigate(['{{ route }}']);
   }
 
   onCancel(): void {
-    this.#router.navigate(['{{ prefix }}']);
+    this.#router.navigate(['{{ route }}']);
   }
 }

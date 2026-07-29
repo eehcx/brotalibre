@@ -4,6 +4,7 @@ use anyhow::{Context, Result, bail};
 use serde_json::json;
 
 use super::TemplateLoader;
+use crate::domain::project::UiChoice;
 use crate::domain::styles_choice::StylesChoice;
 use crate::infrastructure::seeder::commands::write_file;
 
@@ -29,13 +30,16 @@ pub(crate) fn apply_clean_architecture_template(
 
 pub(crate) fn apply_clean_feature_template(
     template_base: &Path,
-    feature_dir: &Path,
+    features_dir: &Path,
     name: &str,
     prefix: &str,
     fields: &[serde_json::Value],
+    ui: UiChoice,
+    styles: StylesChoice,
 ) -> Result<()> {
     let loader = TemplateLoader::new(template_base)?;
     let name_kebab = name.to_string().to_lowercase().replace(' ', "-");
+    let feature_dir = features_dir.join(&name_kebab);
     let name_pascal = name_kebab
         .split('-')
         .map(|w| {
@@ -79,6 +83,7 @@ pub(crate) fn apply_clean_feature_template(
         "name_kebab": name_kebab,
         "name_snake": name_snake,
         "prefix": prefix,
+        "route": name_kebab,
         "fields": fields,
     });
 
@@ -164,12 +169,21 @@ pub(crate) fn apply_clean_feature_template(
         )?,
     )?;
     write_file(
+        &infra_dir.join(format!("{}.mock.ts", name_kebab)),
+        &loader.render(
+            "architecture/clean/infrastructure/{{ name }}.mock.ts.j2",
+            ctx.clone(),
+        )?,
+    )?;
+    write_file(
         &infra_dir.join(format!("{}.provider.ts", name_kebab)),
         &loader.render(
             "architecture/clean/infrastructure/{{ name }}.provider.ts.j2",
-            ctx,
+            ctx.clone(),
         )?,
     )?;
+
+    super::render_feature_presentation(&loader, &feature_dir, &name_kebab, &ctx, ui, styles)?;
 
     Ok(())
 }
@@ -241,6 +255,7 @@ mod tests {
     }
 
     fn feature_files(feature_dir: &std::path::Path, name_kebab: &str) -> Vec<std::path::PathBuf> {
+        let feature_dir = feature_dir.join(name_kebab);
         vec![
             feature_dir
                 .join("domain")
@@ -342,13 +357,33 @@ mod tests {
             serde_json::json!({"name": "email", "type": "string"}),
             serde_json::json!({"name": "age", "type": "number"}),
         ];
-        apply_clean_feature_template(&template_base(), &app_dir, "user", "api", &fields).unwrap();
+        apply_clean_feature_template(
+            &template_base(),
+            &app_dir,
+            "user",
+            "api",
+            &fields,
+            UiChoice::Material,
+            StylesChoice::Css,
+        )
+        .unwrap();
 
         let files = feature_files(&app_dir, "user");
         for f in &files {
             assert!(f.exists(), "missing file: {}", f.display());
         }
         assert_eq!(files.len(), 15);
+        assert!(app_dir.join("user/infrastructure/user.mock.ts").exists());
+        assert!(
+            app_dir
+                .join("user/presentation/list/user-list.component.ts")
+                .exists()
+        );
+        let list =
+            fs::read_to_string(app_dir.join("user/presentation/list/user-list.component.ts"))
+                .unwrap();
+        assert!(list.contains("UserStore"));
+        assert!(!list.contains("Facade"));
     }
 
     #[test]
@@ -357,7 +392,16 @@ mod tests {
         let app_dir = tmp.path().join("src/app");
         create_app_dir(&app_dir);
 
-        apply_clean_feature_template(&template_base(), &app_dir, "my-feature", "api", &[]).unwrap();
+        apply_clean_feature_template(
+            &template_base(),
+            &app_dir,
+            "my-feature",
+            "api",
+            &[],
+            UiChoice::None,
+            StylesChoice::Css,
+        )
+        .unwrap();
 
         let files = feature_files(&app_dir, "my-feature");
         for f in &files {
@@ -391,6 +435,8 @@ mod tests {
             "shopping cart",
             "api",
             &[serde_json::json!({"name": "items", "type": "array"})],
+            UiChoice::None,
+            StylesChoice::Css,
         )
         .unwrap();
 
@@ -407,8 +453,17 @@ mod tests {
         create_app_dir(&app_dir);
 
         let bad_base = tmp.path().join("no-templates");
-        apply_clean_feature_template(&bad_base, &app_dir, "user", "api", &[]).unwrap();
+        apply_clean_feature_template(
+            &bad_base,
+            &app_dir,
+            "user",
+            "api",
+            &[],
+            UiChoice::None,
+            StylesChoice::Css,
+        )
+        .unwrap();
 
-        assert!(app_dir.join("domain/user.entity.ts").exists());
+        assert!(app_dir.join("user/domain/user.entity.ts").exists());
     }
 }

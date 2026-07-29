@@ -1,51 +1,39 @@
-import { inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { lastValueFrom } from 'rxjs';
 import type { {{ name }} } from '../domain/{{ name_kebab }}.entity';
 import type { {{ name }}Id } from '../domain/value-objects/{{ name_kebab }}-id.vo';
 import { {{ name }}RepositoryPort } from '../domain/{{ name_kebab }}-repository.port';
-import type { {{ name }}ResponseDto, {{ name }}ListResponseDto } from './dto/{{ name_kebab }}.response.dto';
-import type { {{ name }}RequestDto } from './dto/{{ name_kebab }}.request.dto';
-import { mapResponseToEntity, mapEntityToRequest, mapListResponseToEntities } from './mappers/{{ name_kebab }}.mapper';
+import { {{ name }}NotFoundError } from '../domain/{{ name_kebab }}.errors';
+import { {{ name_snake | upper }}_MOCK_DATA } from './{{ name_kebab }}.mock';
 
-@Injectable({ providedIn: 'root' })
 export class {{ name }}Repository implements {{ name }}RepositoryPort {
-  readonly #http = inject(HttpClient);
-  readonly #baseUrl = `{{ prefix }}`;
+  // Replace this in-memory adapter with HttpClient calls to {{ prefix }} when the API is ready.
+  readonly #items = [...{{ name_snake | upper }}_MOCK_DATA];
 
-  async getAll(): Promise<{{ name }}[]> {
-    const dto = await lastValueFrom(
-      this.#http.get<{{ name }}ListResponseDto>(this.#baseUrl)
-    );
-    return mapListResponseToEntities(dto);
+  getAll(): Promise<{{ name }}[]> {
+    return Promise.resolve([...this.#items]);
   }
 
   async getById(id: {{ name }}Id): Promise<{{ name }}> {
-    const dto = await lastValueFrom(
-      this.#http.get<{{ name }}ResponseDto>(`${this.#baseUrl}/${id}`)
-    );
-    return mapResponseToEntity(dto);
+    const item = this.#items.find(current => current.id === id);
+    if (!item) throw new {{ name }}NotFoundError(id);
+    return item;
   }
 
-  async create(entity: {{ name }}): Promise<{{ name }}> {
-    const body = mapEntityToRequest(entity);
-    const dto = await lastValueFrom(
-      this.#http.post<{{ name }}ResponseDto>(this.#baseUrl, body)
-    );
-    return mapResponseToEntity(dto);
+  create(entity: {{ name }}): Promise<{{ name }}> {
+    this.#items.push(entity);
+    return Promise.resolve(entity);
   }
 
-  async update(entity: {{ name }}): Promise<{{ name }}> {
-    const body = mapEntityToRequest(entity);
-    const dto = await lastValueFrom(
-      this.#http.put<{{ name }}ResponseDto>(`${this.#baseUrl}/${entity.id}`, body)
-    );
-    return mapResponseToEntity(dto);
+  update(entity: {{ name }}): Promise<{{ name }}> {
+    const index = this.#items.findIndex(current => current.id === entity.id);
+    if (index === -1) throw new {{ name }}NotFoundError(entity.id);
+    this.#items[index] = entity;
+    return Promise.resolve(entity);
   }
 
-  async delete(id: {{ name }}Id): Promise<void> {
-    await lastValueFrom(
-      this.#http.delete<void>(`${this.#baseUrl}/${id}`)
-    );
+  delete(id: {{ name }}Id): Promise<void> {
+    const index = this.#items.findIndex(current => current.id === id);
+    if (index === -1) throw new {{ name }}NotFoundError(id);
+    this.#items.splice(index, 1);
+    return Promise.resolve();
   }
 }

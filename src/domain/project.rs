@@ -47,6 +47,8 @@ pub struct NewProjectRequest {
 pub struct GenerateFeatureRequest {
     pub project_dir: String,
     pub name: String,
+    pub ui: Option<UiChoice>,
+    pub styles: Option<StylesChoice>,
     pub architecture: ArchitectureProfile,
     pub prefix: String,
     pub fields: Vec<String>,

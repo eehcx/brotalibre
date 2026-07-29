@@ -4,7 +4,7 @@ import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { tapResponse } from '@ngrx/operators';
 import { pipe, switchMap, tap } from 'rxjs';
 import { from } from 'rxjs';
-import type { {{ name }} } from '../domain/{{ name_kebab }}.entity';
+import { {{ name }}, type {{ name }}Props } from '../domain/{{ name_kebab }}.entity';
 import type { {{ name }}Id } from '../domain/value-objects/{{ name_kebab }}-id.vo';
 import { {{ name }}RepositoryPort } from '../domain/{{ name_kebab }}-repository.port';
 
@@ -71,10 +71,10 @@ export const {{ name }}Store = signalStore(
       )
     ),
 
-    create: rxMethod<{{ name }}>(
+    create: rxMethod<{{ name }}Props>(
       pipe(
-        switchMap((entity: {{ name }}) =>
-          from(repo.create(entity)).pipe(
+        switchMap((props: {{ name }}Props) =>
+          from(repo.create({{ name }}.create(props))).pipe(
             tapResponse({
               next: (item: {{ name }}) => store.items.update((items: {{ name }}[]) => [...items, item]),
               error: (err: Error) => store.error.set(err.message),
@@ -84,10 +84,10 @@ export const {{ name }}Store = signalStore(
       )
     ),
 
-    update: rxMethod<{{ name }}>(
+    update: rxMethod<{{ name }}Props & { id: {{ name }}Id }>(
       pipe(
-        switchMap((entity: {{ name }}) =>
-          from(repo.update(entity)).pipe(
+        switchMap((props: {{ name }}Props & { id: {{ name }}Id }) =>
+          from(repo.update({{ name }}.create(props))).pipe(
             tapResponse({
               next: (item: {{ name }}) =>
                 store.items.update((items: {{ name }}[]) =>

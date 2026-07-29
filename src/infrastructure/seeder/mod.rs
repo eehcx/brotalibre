@@ -64,6 +64,8 @@ impl Seeder for SystemSeeder {
         name: &str,
         prefix: &str,
         fields: &[String],
+        ui: UiChoice,
+        styles: StylesChoice,
     ) -> Result<()> {
         let template_base = template_base()?;
 
@@ -74,6 +76,7 @@ impl Seeder for SystemSeeder {
                 serde_json::json!({
                     "name": parts[0],
                     "type": parts.get(1).copied().unwrap_or("string"),
+                    "required": true,
                 })
             })
             .collect();
@@ -85,6 +88,8 @@ impl Seeder for SystemSeeder {
                 name,
                 prefix,
                 &fields_json,
+                ui,
+                styles,
             ),
             ArchitectureProfile::Ddd => templates::ddd::apply_ddd_feature_template(
                 &template_base,
@@ -92,10 +97,16 @@ impl Seeder for SystemSeeder {
                 name,
                 prefix,
                 &fields_json,
+                ui,
+                styles,
             ),
         }?;
 
         add_ngrx_deps_to_package_json(project_dir)?;
+        if ui != UiChoice::None || styles == StylesChoice::TailwindCSS {
+            patch_app_config(project_dir, architecture, name, ui)?;
+            patch_app_routes(project_dir, architecture, name)?;
+        }
 
         Ok(())
     }
@@ -207,6 +218,113 @@ fn add_ngrx_deps_to_package_json(project_dir: &Path) -> Result<()> {
 
     std::fs::write(&pkg_path, serde_json::to_string_pretty(&json)?)?;
     Ok(())
+}
+
+fn patch_app_config(
+    project_dir: &Path,
+    architecture: ArchitectureProfile,
+    name: &str,
+    ui: UiChoice,
+) -> Result<()> {
+    let path = project_dir.join("src/app/app.config.ts");
+    if !path.exists() {
+        return Ok(());
+    }
+    let kebab = normalize_name(name);
+    let snake = kebab.replace('-', "_").to_uppercase();
+    let feature_path = match architecture {
+        ArchitectureProfile::Clean => format!("./{kebab}"),
+        ArchitectureProfile::Ddd => format!("./features/{kebab}"),
+    };
+    let provider_import = format!(
+        "import {{ {snake}_PROVIDERS }} from '{feature_path}/infrastructure/{kebab}.provider';"
+    );
+    let mut content = std::fs::read_to_string(&path)?;
+    if !content.contains(&provider_import) {
+        content = format!("{provider_import}\n{content}");
+    }
+    if !content.contains(&format!("...{snake}_PROVIDERS")) {
+        content = content.replacen(
+            "providers: [",
+            &format!("providers: [\n    ...{snake}_PROVIDERS,"),
+            1,
+        );
+    }
+    if !content.contains("provideHttpClient") {
+        content = format!(
+            "import {{ provideHttpClient, withFetch }} from '@angular/common/http';\n{content}"
+        );
+        content = content.replacen(
+            "providers: [",
+            "providers: [\n    provideHttpClient(withFetch()),",
+            1,
+        );
+    }
+    if ui == UiChoice::Material && !content.contains("provideAnimations") {
+        content = format!(
+            "import {{ provideAnimations }} from '@angular/platform-browser/animations';\n{content}"
+        );
+        content = content.replacen("providers: [", "providers: [\n    provideAnimations(),", 1);
+    }
+    if content.contains("provideRouter(routes)") {
+        content = content.replace(
+            "provideRouter(routes)",
+            "provideRouter(routes, withComponentInputBinding())",
+        );
+        content =
+            format!("import {{ withComponentInputBinding }} from '@angular/router';\n{content}");
+    }
+    std::fs::write(path, content)?;
+    Ok(())
+}
+
+fn patch_app_routes(
+    project_dir: &Path,
+    architecture: ArchitectureProfile,
+    name: &str,
+) -> Result<()> {
+    let path = project_dir.join("src/app/app.routes.ts");
+    if !path.exists() {
+        return Ok(());
+    }
+    let kebab = normalize_name(name);
+    let pascal = pascal_case(&kebab);
+    let feature_path = match architecture {
+        ArchitectureProfile::Clean => format!("./{kebab}"),
+        ArchitectureProfile::Ddd => format!("./features/{kebab}"),
+    };
+    let mut content = std::fs::read_to_string(&path)?;
+    if content.contains(&format!("path: '{kebab}'")) {
+        return Ok(());
+    }
+    let routes = format!(
+        "  {{ path: '{kebab}', loadComponent: () => import('{feature_path}/presentation/list/{kebab}-list.component').then(m => m.{pascal}ListComponent) }},\n  {{ path: '{kebab}/new', loadComponent: () => import('{feature_path}/presentation/form/{kebab}-form.component').then(m => m.{pascal}FormComponent) }},\n  {{ path: '{kebab}/:id', loadComponent: () => import('{feature_path}/presentation/detail/{kebab}-detail.component').then(m => m.{pascal}DetailComponent) }},\n  {{ path: '{kebab}/:id/edit', loadComponent: () => import('{feature_path}/presentation/form/{kebab}-form.component').then(m => m.{pascal}FormComponent) }},\n"
+    );
+    if let Some(index) = content.rfind("];") {
+        content.insert_str(index, &routes);
+    } else {
+        content = format!(
+            "import {{ Routes }} from '@angular/router';\n\nexport const routes: Routes = [\n{routes}];\n"
+        );
+    }
+    std::fs::write(path, content)?;
+    Ok(())
+}
+
+fn normalize_name(name: &str) -> String {
+    name.to_lowercase().replace(' ', "-")
+}
+
+fn pascal_case(name: &str) -> String {
+    name.split('-')
+        .map(|word| {
+            let mut chars = word.chars();
+            chars
+                .next()
+                .map(|first| first.to_uppercase().collect::<String>() + chars.as_str())
+                .unwrap_or_default()
+        })
+        .collect()
 }
 
 #[cfg(test)]
