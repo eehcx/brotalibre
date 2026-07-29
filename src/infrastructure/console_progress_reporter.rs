@@ -139,10 +139,11 @@ impl ProgressReporter for ConsoleProgressReporter {
             style(styles_label(options.styles)).yellow()
         );
         println!();
-        println!("{}", style("next steps").bold());
+        println!("{}", style("next steps:").bold());
         println!("  cd {}", project_name);
-        println!("  {} start", package_manager_label(options.package_manager));
-        println!("  ng serve          (recommended)");
+        println!("  ng serve (recommended)");
+        //println!("  {} start or ng serve (recommended)", package_manager_label(options.package_manager));
+        //println!("  ng serve (recommended)");
     }
 }
 
