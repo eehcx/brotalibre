@@ -351,6 +351,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "ngseed"
+version = "0.2.2"
+dependencies = [
+ "anyhow",
+ "clap",
+ "console",
+ "dialoguer",
+ "indicatif",
+ "minijinja",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "number_prefix"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

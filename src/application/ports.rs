@@ -56,6 +56,12 @@ pub trait Seeder {
         ui: UiChoice,
         package_manager: PackageManager,
     ) -> Result<()>;
+    fn apply_styles(
+        &self,
+        project_dir: &Path,
+        styles: StylesChoice,
+        package_manager: PackageManager,
+    ) -> Result<()>;
 }
 
 /// Seeder port for the Astro docs i18n flow.

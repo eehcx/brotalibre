@@ -1,0 +1,8 @@
+import { InjectionToken } from '@angular/core';
+import { Greeting } from '../entities/greeting.entity';
+
+export interface GreetingRepository {
+  getGreeting(): Greeting;
+}
+
+export const GREETING_REPOSITORY = new InjectionToken<GreetingRepository>('GREETING_REPOSITORY');

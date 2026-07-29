@@ -8,3 +8,7 @@ openspec/
 
 #Test examples
 /my-app
+/target
+/openspec
+.vscode
+.idea

@@ -56,6 +56,10 @@ impl<'a> NewProjectUseCase<'a> {
             //self.reporter.show_banner();
         }
 
+        if !request.yes && !self.env.is_ci() && self.env.is_interactive_terminal() {
+            self.reporter.show_banner();
+        }
+
         self.reporter
             .stage_start("preflight", "checking required tools");
         if let Err(err) = self.seeder.ensure_required_tools(options.package_manager) {
@@ -140,6 +144,19 @@ impl<'a> NewProjectUseCase<'a> {
         }
         self.reporter
             .stage_ok("ui setup", "UI integration completed");
+
+        if options.styles != StylesChoice::None {
+            self.reporter.stage_start("styles", "applying styles setup");
+            if let Err(err) = self.seeder.apply_styles(
+                &absolute_project_dir,
+                options.styles,
+                options.package_manager,
+            ) {
+                self.reporter.stage_error("styles", "styles setup failed");
+                return Err(err);
+            }
+            self.reporter.stage_ok("styles", "styles setup completed");
+        }
 
         self.reporter
             .summary(&request.project_name, &absolute_project_dir, options);
@@ -449,6 +466,16 @@ mod tests {
             self.calls
                 .borrow_mut()
                 .push("apply_ui_integration".to_string());
+            Ok(())
+        }
+
+        fn apply_styles(
+            &self,
+            _project_dir: &Path,
+            _styles: StylesChoice,
+            _package_manager: PackageManager,
+        ) -> Result<()> {
+            self.calls.borrow_mut().push("apply_styles".to_string());
             Ok(())
         }
     }
