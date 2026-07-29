@@ -1,4 +1,5 @@
 use anyhow::Result;
+use console::style;
 
 mod application;
 mod domain;
@@ -9,18 +10,23 @@ use application::use_cases::generate_feature::GenerateFeatureUseCase;
 use application::use_cases::new_project::NewProjectUseCase;
 use infrastructure::console_progress_reporter::ConsoleProgressReporter;
 use infrastructure::dialoguer_ui_selector::DialoguerUiSelector;
-use infrastructure::system_environment::SystemEnvironment;
 use infrastructure::seeder::SystemSeeder;
+use infrastructure::system_environment::SystemEnvironment;
 
 const BANNER: &str = r#"
-⣿⡿⠿⢶⣦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⣶⡆⠀⠀⠀⠐⠿⠆⠀⣶⡆
-⣿⣇⣀⣠⣿⠇⠀⣿⣶⠾⠇⣠⣶⠿⠿⣷⣄⠐⢿⣿⠿⠗⠀⠿⠿⠿⣶⡄⠀⣿⡇⠀⠀⠀⠺⣿⡇⠀⣿⣷⠾⠿⣷⣦⠀⢸⣧⡶⠿⢀⣴⠿⠿⢷⣄
-⣿⡏⠉⠙⣿⣦⠀⣿⡇⠀⠀⣿⡇⠀⠀⢸⣿⠀⢸⣿⠀⠀⢠⣶⠶⠶⣿⡇⠀⣿⡇⠀⠀⠀⠀⣿⡇⠀⣿⡏⠀⠀⢸⣿⠀⢸⣿⠀⠀⢸⣿⠶⠶⠾⠿
-⣿⣷⣶⣶⡿⠃⠀⣿⡇⠀⠀⠙⢿⣶⣶⡾⠟⠀⠘⢿⣶⡦⠘⢿⣦⡴⢿⡇⠀⣿⣷⣶⣶⡦⠀⣿⡇⠀⣿⡿⢶⣴⣾⠟⠀⢸⣿⠀⠀⠈⠿⣶⣴⡾⠏
+
+    ______           _        _     _ _
+    | ___ \         | |      | |   (_) |
+    | |_/ /_ __ ___ | |_ __ _| |    _| |__  _ __ ___
+    | ___ \ '__/ _ \| __/ _` | |   | | '_ \| '__/ _ \
+    | |_/ / | | (_) | || (_| | |___| | |_) | | |  __/
+    \____/|_|  \___/ \__\__,_\_____/_|_.__/|_|  \___|
+
+    BrotaLibre - Grow scalable frontends from solid foundations.
 "#;
 
 pub fn run() -> Result<()> {
-    println!("{}", BANNER);
+    println!("{}", style(BANNER).blue());
 
     let command = interfaces::cli::parse()?;
 
