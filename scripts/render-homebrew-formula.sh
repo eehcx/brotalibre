@@ -18,7 +18,7 @@ if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   exit 64
 fi
 
-if [[ ! "$tag" =~ ^ngseed-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+if [[ ! "$tag" =~ ^(ngseed|brotalibre)-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   printf 'invalid release tag: %s\n' "$tag" >&2
   exit 64
 fi

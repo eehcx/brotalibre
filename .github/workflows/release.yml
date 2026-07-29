@@ -210,8 +210,8 @@ jobs:
           if [[ -z "${TAG}" ]]; then
             TAG="${RELEASE_PLEASE_TAG}"
           fi
-          if [[ ! "${TAG}" =~ ^ngseed-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            printf '%s\n' '::error::Provide a release tag in the form ngseed-v<major>.<minor>.<patch>.'
+          if [[ ! "${TAG}" =~ ^(ngseed|brotalibre)-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            printf '%s\n' '::error::Provide a release tag in the form brotalibre-v<major>.<minor>.<patch>.'
             exit 1
           fi
           printf 'tag=%s\n' "${TAG}" >> "${GITHUB_OUTPUT}"
