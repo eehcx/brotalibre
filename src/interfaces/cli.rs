@@ -14,7 +14,7 @@ use crate::domain::styles_choice::StylesChoice;
 #[command(
     name = "brota",
     version,
-    about = "Scaffold production-ready Angular projects",
+    about = "Scaffold production-ready Frontends projects",
     long_about = "A modern CLI to scaffold Angular applications and Astro documentation sites.",
     after_help = "Examples:\n  brota new my-app --architecture clean\n  brota new my-app --architecture ddd --ui none\n  brota new docs-site --framework astro --docs-engine starlight --i18n en,es\n  brota new my-app --yes --ui material --package-manager pnpm",
     arg_required_else_help = true
