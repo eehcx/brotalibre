@@ -1,9 +1,9 @@
-/target
-/openspec
+target/
+openspec/
 .engram/
-.vscode
-.idea
-.atl
+.vscode/
+.idea/
+.atl/
 
 
 #Test examples
