@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/eehcx/ngseed/compare/ngseed-v0.1.2...ngseed-v0.2.0) (2026-03-27)
+
+
+### Features
+
+* add templates system and cdp architecture profile ([#6](https://github.com/eehcx/ngseed/issues/6)) ([654c1be](https://github.com/eehcx/ngseed/commit/654c1be3f6511831348a150097ec6080588c136e))
+
 ## [0.1.2](https://github.com/eehcx/ngseed/compare/ngseed-v0.1.1...ngseed-v0.1.2) (2026-03-26)
 
 
