@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.4.0](https://github.com/eehcx/brotalibre/compare/brotalibre-v0.3.1...brotalibre-v0.4.0) (2026-07-29)
+
+
+### Features
+
+* Add Astro framework support and enhance documentation scaffolding ([#14](https://github.com/eehcx/brotalibre/issues/14)) ([6502608](https://github.com/eehcx/brotalibre/commit/6502608c2212fb52b414c7ef8388acc38cdaf53c))
+* add templates system and cdp architecture profile ([#6](https://github.com/eehcx/brotalibre/issues/6)) ([654c1be](https://github.com/eehcx/brotalibre/commit/654c1be3f6511831348a150097ec6080588c136e))
+
+
+### Bug Fixes
+
+* **ci:** remove stale code from master/develop merge conflict ([#16](https://github.com/eehcx/brotalibre/issues/16)) ([8726b91](https://github.com/eehcx/brotalibre/commit/8726b91cea877495f4eb30a9ff9cb2cc4d60527e))
+* **ci:** resolve template path for installed binary ([#10](https://github.com/eehcx/brotalibre/issues/10)) ([5c71473](https://github.com/eehcx/brotalibre/commit/5c714730cc4ccb30915f3b20cc328a417d789b8b))
+* **ci:** satisfy clippy and rustfmt checks ([293ca33](https://github.com/eehcx/brotalibre/commit/293ca335786df465e50cd78876fd27d48297f0d1))
+* **ci:** support release-please component tags in version check ([7d5070c](https://github.com/eehcx/brotalibre/commit/7d5070cfb7ae587f2703e706bc2612058c9f6468))
+* **ci:** switch macOS runner to macos-latest in workflows ([78e1fcc](https://github.com/eehcx/brotalibre/commit/78e1fcca6b5a3c95e12966902f012ca1f121fd89))
+* **ci:** switch macOS runner to macos-latest in workflows ([55b8dfb](https://github.com/eehcx/brotalibre/commit/55b8dfb2e450bdfbb64ce7ece78e03ba8ee057b6))
+* create tailwind.config.js and postcss.config.js manually instead of running npx tailwindcss init ([#8](https://github.com/eehcx/brotalibre/issues/8)) ([078eec4](https://github.com/eehcx/brotalibre/commit/078eec49f31be22187d4b99f89ab78c172105e3d))
+* **release:** switch tag prefix from ngseed-v to brotalibre-v ([#18](https://github.com/eehcx/brotalibre/issues/18)) ([377ff8f](https://github.com/eehcx/brotalibre/commit/377ff8f4209baffea3e4cecf2b929757a9d4dc1a))
+
 ## [0.3.1](https://github.com/eehcx/brotalibre/compare/ngseed-v0.3.0...ngseed-v0.3.1) (2026-07-29)
 
 
