@@ -2,6 +2,7 @@
 
 Frontend scaffolding from architecture to a runnable project foundation.
 
+[![status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/eehcx/brotalibre/releases)
 [![Crates.io](https://img.shields.io/crates/v/brotalibre?logo=rust)](https://crates.io/crates/brotalibre)
 [![Downloads](https://img.shields.io/crates/d/brotalibre)](https://crates.io/crates/brotalibre)
 [![Docs.rs](https://img.shields.io/docsrs/brotalibre?logo=docs.rs)](https://docs.rs/brotalibre)
