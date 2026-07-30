@@ -4,11 +4,8 @@ openspec/
 .vscode/
 .idea/
 .atl/
+.playwright-mcp/
 
 
 #Test examples
 /my-app
-/target
-/openspec
-.vscode
-.idea
