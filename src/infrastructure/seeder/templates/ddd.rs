@@ -24,6 +24,8 @@ pub(crate) fn apply_ddd_architecture_template(
 
     patch_app_component_for_ddd(template_base, &app_dir, project_name, styles)?;
     patch_app_config_for_ddd(template_base, &app_dir)?;
+    super::patch_app_routes(template_base, &app_dir, project_name)?;
+    super::patch_admin_shell(template_base, &app_dir, project_name)?;
 
     let features_dir = app_dir.join("features");
     std::fs::create_dir_all(&features_dir)
@@ -324,6 +326,16 @@ mod tests {
         assert!(app_dir.join("app.ts").exists());
         assert!(app_dir.join("app.html").exists());
         assert!(app_dir.join("app.config.ts").exists());
+        assert!(app_dir.join("app.routes.ts").exists());
+        assert!(app_dir.join("ui/_shared/pages/welcome.component.ts").exists());
+        assert!(app_dir.join("ui/_shared/pages/dashboard.component.ts").exists());
+        assert!(app_dir.join("ui/_shared/pages/not-found.component.ts").exists());
+        assert!(app_dir.join("ui/_shared/pages/welcome.component.css").exists());
+        assert!(app_dir.join("ui/_shared/pages/dashboard.component.css").exists());
+        assert!(app_dir.join("ui/_shared/pages/not-found.component.css").exists());
+        assert!(app_dir.join("shared/layout/admin-shell.component.ts").exists());
+        assert!(app_dir.join("shared/layout/admin-shell.component.html").exists());
+        assert!(app_dir.join("shared/layout/admin-shell.component.css").exists());
         assert!(app_dir.join("features").exists());
     }
 

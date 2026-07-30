@@ -76,8 +76,10 @@ impl Seeder for SystemSeeder {
             .iter()
             .map(|f| {
                 let parts: Vec<&str> = f.splitn(2, ':').collect();
+                let name = parts[0];
                 serde_json::json!({
-                    "name": parts[0],
+                    "name": name,
+                    "label": field_label(name),
                     "type": parts.get(1).copied().unwrap_or("string"),
                     "required": true,
                 })
@@ -511,9 +513,11 @@ fn patch_app_routes(
         return Ok(());
     }
     let routes = format!(
-        "  {{ path: '{kebab}', loadComponent: () => import('{feature_path}/presentation/list/{kebab}-list.component').then(m => m.{pascal}ListComponent) }},\n  {{ path: '{kebab}/new', loadComponent: () => import('{feature_path}/presentation/form/{kebab}-form.component').then(m => m.{pascal}FormComponent) }},\n  {{ path: '{kebab}/:id', loadComponent: () => import('{feature_path}/presentation/detail/{kebab}-detail.component').then(m => m.{pascal}DetailComponent) }},\n  {{ path: '{kebab}/:id/edit', loadComponent: () => import('{feature_path}/presentation/form/{kebab}-form.component').then(m => m.{pascal}FormComponent) }},\n"
+        "  {{ path: '{kebab}', loadComponent: () => import('{feature_path}/presentation/list/{kebab}-list.component').then(m => m.{pascal}ListComponent) }},\n  {{ path: '{kebab}/new', loadComponent: () => import('{feature_path}/presentation/form/{kebab}-form.component').then(m => m.{pascal}FormComponent) }},\n  {{ path: '{kebab}/:id/edit', loadComponent: () => import('{feature_path}/presentation/form/{kebab}-form.component').then(m => m.{pascal}FormComponent) }},\n"
     );
-    if let Some(index) = content.rfind("];") {
+    if let Some(index) = content.find("  { path: '**'") {
+        content.insert_str(index, &routes);
+    } else if let Some(index) = content.rfind("];") {
         content.insert_str(index, &routes);
     } else {
         content = format!(
@@ -538,6 +542,46 @@ fn pascal_case(name: &str) -> String {
                 .unwrap_or_default()
         })
         .collect()
+}
+
+fn field_label(name: &str) -> String {
+    if name.is_empty() {
+        return String::new();
+    }
+    let mut result = String::new();
+    let chars: Vec<char> = name.chars().collect();
+    for (i, &c) in chars.iter().enumerate() {
+        if c == '_' || c == '-' {
+            result.push(' ');
+            continue;
+        }
+        if i > 0 && c.is_uppercase() {
+            let prev = chars[i - 1];
+            if prev == ' ' || prev == '_' || prev == '-' {
+                // already separated
+            } else if prev.is_lowercase() {
+                result.push(' ');
+            } else if prev.is_uppercase()
+                && i + 1 < chars.len()
+                && chars[i + 1].is_lowercase()
+            {
+                result.push(' ');
+            }
+        }
+        result.push(c);
+    }
+    result
+        .split(' ')
+        .map(|w| {
+            if w.is_empty() {
+                return String::new();
+            }
+            let mut chars = w.chars();
+            let first = chars.next().unwrap();
+            first.to_uppercase().to_string() + chars.as_str()
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 #[cfg(test)]
@@ -833,5 +877,39 @@ mod tests {
             })
             .collect();
         assert!(result.is_empty());
+    }
+
+    #[test]
+    fn field_label_simple_name() {
+        assert_eq!(field_label("name"), "Name");
+    }
+
+    #[test]
+    fn field_label_camel_case() {
+        assert_eq!(field_label("createdAt"), "Created At");
+        assert_eq!(field_label("firstName"), "First Name");
+    }
+
+    #[test]
+    fn field_label_snake_case() {
+        assert_eq!(field_label("phone_number"), "Phone Number");
+        assert_eq!(field_label("home_address"), "Home Address");
+    }
+
+    #[test]
+    fn field_label_acronym_suffix() {
+        assert_eq!(field_label("userURL"), "User URL");
+        assert_eq!(field_label("apiKey"), "Api Key");
+    }
+
+    #[test]
+    fn field_label_boolean_prefix() {
+        assert_eq!(field_label("isActive"), "Is Active");
+        assert_eq!(field_label("emailVerified"), "Email Verified");
+    }
+
+    #[test]
+    fn field_label_empty() {
+        assert_eq!(field_label(""), "");
     }
 }

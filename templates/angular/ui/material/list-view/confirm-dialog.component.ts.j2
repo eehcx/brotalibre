@@ -1,0 +1,19 @@
+import { Component, inject } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialogModule, MAT_DIALOG_DATA } from '@angular/material/dialog';
+
+@Component({
+  selector: 'app-confirm-dialog',
+  imports: [MatButtonModule, MatDialogModule],
+  template: `
+    <h2 mat-dialog-title>{% raw %}{{ data.title }}{% endraw %}</h2>
+    <mat-dialog-content>{% raw %}{{ data.message }}{% endraw %}</mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button [mat-dialog-close]="false">Cancel</button>
+      <button mat-flat-button color="warn" [mat-dialog-close]="true">Delete</button>
+    </mat-dialog-actions>
+  `,
+})
+export class ConfirmDialogComponent {
+  readonly data = inject<{% raw %}{{% endraw %} title: string; message: string }>(MAT_DIALOG_DATA);
+}
