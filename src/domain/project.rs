@@ -1,3 +1,4 @@
+use crate::domain::profile::Profile;
 use crate::domain::styles_choice::StylesChoice;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -84,6 +85,10 @@ pub struct NewProjectRequest {
     pub skip_install: bool,
     pub skip_git: bool,
     pub yes: bool,
+    /// Product profile that selects coherent defaults for framework,
+    /// architecture, UI library, style engine, and package manager.
+    /// When `None`, defaults to the `AngularAdmin` profile under `--yes`.
+    pub profile: Option<Profile>,
     /// Target framework. When `None`, interactive runs ask the user and
     /// non-interactive/`--yes` runs keep Angular as the default.
     pub framework: Option<Framework>,
