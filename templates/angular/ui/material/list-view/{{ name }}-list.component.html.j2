@@ -1,4 +1,4 @@
-<div class="container">
+<div class="list-container">
   @if (loading()) {
     <div class="spinner-wrapper">
       <mat-spinner diameter="48" />
@@ -6,35 +6,69 @@
   }
 
   @if (error()) {
-    <p class="error-message">{% raw %}{{ error() }}{% endraw %}</p>
+    <div class="error-message">{% raw %}{{ error() }}{% endraw %}</div>
   }
 
   @if (!loading() && !error()) {
-    <mat-table [dataSource]="items()">
-      {% for field in fields %}
-      <ng-container matColumnDef="{{ field.name }}">
-        <mat-header-cell *matHeaderCellDef>{{ field.name | capitalize }}</mat-header-cell>
-        <mat-cell *matCellDef="let row">{% raw %}{{ row.{% endraw %}{{ field.name }}{% raw %} }}{% endraw %}</mat-cell>
-      </ng-container>
-      {% endfor %}
+    <div class="list-header">
+      <h1>{{ name }}</h1>
+      <button mat-flat-button color="primary" routerLink="new">
+        <mat-icon>add</mat-icon> Create
+      </button>
+    </div>
 
-      <ng-container matColumnDef="actions">
-        <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
-        <mat-cell *matCellDef="let row">
-          <button mat-icon-button [routerLink]="[row.id]">
-            <mat-icon>visibility</mat-icon>
-          </button>
-          <button mat-icon-button [routerLink]="[row.id, 'edit']">
-            <mat-icon>edit</mat-icon>
-          </button>
-          <button mat-icon-button color="warn" (click)="onDelete(row.id)">
-            <mat-icon>delete</mat-icon>
-          </button>
-        </mat-cell>
-      </ng-container>
+    <mat-card appearance="outlined">
+      <mat-card-content>
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Search</mat-label>
+          <input matInput (input)="applyFilter($event)" placeholder="Filter by any field" />
+          <mat-icon matPrefix>search</mat-icon>
+        </mat-form-field>
 
-      <mat-header-row *matHeaderRowDef="displayedColumns" />
-      <mat-row *matRowDef="let row; columns: displayedColumns" />
-    </mat-table>
+        @if (dataSource.data.length > 0) {
+          <div class="table-wrapper">
+            <mat-table [dataSource]="dataSource" matSort>
+              {% for field in fields %}
+              <ng-container matColumnDef="{{ field.name }}">
+                <mat-header-cell *matHeaderCellDef mat-sort-header>{{ field.label }}</mat-header-cell>
+                <mat-cell *matCellDef="let row">{% raw %}{{ row.{% endraw %}{{ field.name }}{% raw %} }}{% endraw %}</mat-cell>
+              </ng-container>
+              {% endfor %}
+
+              <ng-container matColumnDef="actions">
+                <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+                <mat-cell *matCellDef="let row">
+                  <button mat-icon-button (click)="openDetail(row)">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                  <button mat-icon-button [routerLink]="[row.id, 'edit']">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" (click)="onDelete(row.id)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </mat-cell>
+              </ng-container>
+
+              <mat-header-row *matHeaderRowDef="displayedColumns" />
+              <mat-row *matRowDef="let row; columns: displayedColumns" />
+            </mat-table>
+          </div>
+
+          <mat-paginator
+            [pageSizeOptions]="[10, 25, 50]"
+            [pageSize]="10"
+            showFirstLastButtons
+            aria-label="Select page"
+          />
+        } @else {
+          <div class="empty-state">
+            <mat-icon class="empty-icon">inbox</mat-icon>
+            <p>No {{ name_kebab | replace('_', ' ') }} found</p>
+            <button mat-stroked-button color="primary" routerLink="new">Create the first one</button>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
   }
 </div>

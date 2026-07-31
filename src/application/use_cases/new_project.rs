@@ -5,6 +5,7 @@ use crate::application::ports::Environment;
 use crate::application::ports::ProgressReporter;
 use crate::application::ports::Seeder;
 use crate::application::ports::UiSelector;
+use crate::domain::profile::Profile;
 use crate::domain::project::ArchitectureProfile;
 use crate::domain::project::AstroResolvedOptions;
 use crate::domain::project::DocsEngine;
@@ -40,7 +41,13 @@ impl<'a> NewProjectUseCase<'a> {
         }
     }
 
-    pub fn execute(&self, request: NewProjectRequest) -> Result<()> {
+    pub fn execute(&self, mut request: NewProjectRequest) -> Result<()> {
+        if let Some(profile) = request.profile {
+            profile.apply_to_request(&mut request);
+        } else if request.yes {
+            Profile::AngularAdmin.apply_to_request(&mut request);
+        }
+
         let framework = self.resolve_framework(&request)?;
 
         match framework {
@@ -386,6 +393,8 @@ mod tests {
     #[derive(Default)]
     struct FakeSeeder {
         calls: RefCell<Vec<String>>,
+        resolved_ui: RefCell<Option<UiChoice>>,
+        resolved_styles: RefCell<Option<StylesChoice>>,
     }
 
     impl Seeder for FakeSeeder {
@@ -399,8 +408,10 @@ mod tests {
         fn scaffold_angular_project(
             &self,
             _project_name: &str,
-            _options: ResolvedOptions,
+            options: ResolvedOptions,
         ) -> Result<()> {
+            self.resolved_ui.borrow_mut().replace(options.ui);
+            self.resolved_styles.borrow_mut().replace(options.styles);
             self.calls
                 .borrow_mut()
                 .push("scaffold_angular_project".to_string());
@@ -517,6 +528,7 @@ mod tests {
     ) -> NewProjectRequest {
         NewProjectRequest {
             project_name: project_name.to_string(),
+            profile: None,
             ui: None,
             styles: None,
             package_manager: Some(PackageManager::Npm),
@@ -589,6 +601,7 @@ mod tests {
         use_case
             .execute(NewProjectRequest {
                 project_name: "interactive-docs".to_string(),
+                profile: None,
                 ui: None,
                 styles: None,
                 package_manager: None,
@@ -733,5 +746,62 @@ mod tests {
                 .iter()
                 .any(|c| c == "apply_astro_template:Starlight:fallback-docs:en")
         );
+    }
+
+    #[test]
+    fn yes_without_profile_applies_angular_admin_defaults() {
+        let env = FakeEnvironment {
+            exists: false,
+            cwd: PathBuf::from("/tmp"),
+        };
+        let ui_selector = FakeUiSelector {
+            framework: Framework::Angular,
+            ui: UiChoice::None,
+            styles: StylesChoice::Css,
+            docs_engine: DocsEngine::Starlight,
+            locales: vec!["en".to_string()],
+        };
+        let seeder = FakeSeeder::default();
+        let astro_seeder = FakeAstroSeeder::default();
+        let reporter = FakeReporter;
+        let use_case =
+            NewProjectUseCase::new(&env, &ui_selector, &seeder, &astro_seeder, &reporter);
+
+        // Request: yes=true, profile=None → should apply AngularAdmin defaults
+        use_case
+            .execute(make_request("material-app", None, None, vec![]))
+            .unwrap();
+
+        assert_eq!(*seeder.resolved_ui.borrow(), Some(UiChoice::Material));
+        assert_eq!(*seeder.resolved_styles.borrow(), Some(StylesChoice::Scss));
+    }
+
+    #[test]
+    fn explicit_ui_flag_overrides_profile_default() {
+        let env = FakeEnvironment {
+            exists: false,
+            cwd: PathBuf::from("/tmp"),
+        };
+        let ui_selector = FakeUiSelector {
+            framework: Framework::Angular,
+            ui: UiChoice::None,
+            styles: StylesChoice::Css,
+            docs_engine: DocsEngine::Starlight,
+            locales: vec!["en".to_string()],
+        };
+        let seeder = FakeSeeder::default();
+        let astro_seeder = FakeAstroSeeder::default();
+        let reporter = FakeReporter;
+        let use_case =
+            NewProjectUseCase::new(&env, &ui_selector, &seeder, &astro_seeder, &reporter);
+
+        // Request: yes=true, profile=None, but explicit ui→Primeng, styles→Css
+        let mut req = make_request("primeng-app", None, None, vec![]);
+        req.ui = Some(UiChoice::Primeng);
+        req.styles = Some(StylesChoice::Css);
+        use_case.execute(req).unwrap();
+
+        assert_eq!(*seeder.resolved_ui.borrow(), Some(UiChoice::Primeng));
+        assert_eq!(*seeder.resolved_styles.borrow(), Some(StylesChoice::Css));
     }
 }

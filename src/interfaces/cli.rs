@@ -1,6 +1,7 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
 
+use crate::domain::profile::Profile;
 use crate::domain::project::ArchitectureProfile;
 use crate::domain::project::DocsEngine;
 use crate::domain::project::Framework;
@@ -89,6 +90,11 @@ struct NewCommand {
     #[arg(long)]
     yes: bool,
 
+    /// Product profile that selects coherent defaults
+    /// (angular-admin | astro-landing | astro-docs).
+    #[arg(long, value_enum)]
+    profile: Option<CliProfile>,
+
     /// Target frontend framework (angular | astro). Defaults to angular.
     #[arg(long, value_enum)]
     framework: Option<CliFramework>,
@@ -146,6 +152,13 @@ enum CliDocsEngine {
     Native,
 }
 
+#[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
+enum CliProfile {
+    AngularAdmin,
+    AstroLanding,
+    AstroDocs,
+}
+
 pub enum AppCommand {
     New(NewProjectRequest),
     GenerateFeature(GenerateFeatureRequest),
@@ -168,6 +181,7 @@ fn map_cli_to_command(cli: Cli) -> AppCommand {
     match cli.command {
         Commands::New(cmd) => AppCommand::New(NewProjectRequest {
             project_name: cmd.project_name,
+            profile: cmd.profile.map(Into::into),
             ui: cmd.ui.map(Into::into),
             styles: cmd.styles.map(Into::into),
             package_manager: cmd.package_manager.map(Into::into),
@@ -263,6 +277,16 @@ impl From<CliDocsEngine> for DocsEngine {
     }
 }
 
+impl From<CliProfile> for Profile {
+    fn from(value: CliProfile) -> Self {
+        match value {
+            CliProfile::AngularAdmin => Profile::AngularAdmin,
+            CliProfile::AstroLanding => Profile::AstroLanding,
+            CliProfile::AstroDocs => Profile::AstroDocs,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -319,7 +343,32 @@ mod tests {
 
         assert_eq!(request.framework, None);
         assert_eq!(request.docs_engine, None);
+        assert_eq!(request.profile, None);
         assert!(request.locales.is_empty());
+    }
+
+    #[test]
+    fn parse_new_command_with_profile_angular_admin() {
+        let command = parse_from(["brota", "new", "demo", "--profile", "angular-admin"]).unwrap();
+
+        let request = match command {
+            AppCommand::New(r) => r,
+            _ => panic!("expected New command"),
+        };
+
+        assert_eq!(request.profile, Some(Profile::AngularAdmin));
+    }
+
+    #[test]
+    fn parse_new_command_with_profile_astro_docs() {
+        let command = parse_from(["brota", "new", "docs", "--profile", "astro-docs"]).unwrap();
+
+        let request = match command {
+            AppCommand::New(r) => r,
+            _ => panic!("expected New command"),
+        };
+
+        assert_eq!(request.profile, Some(Profile::AstroDocs));
     }
 
     #[test]

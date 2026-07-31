@@ -1,12 +1,10 @@
 import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { AdminShellComponent } from './shared/layout/admin-shell.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  imports: [AdminShellComponent],
   templateUrl: '{{ template_url }}',
   styleUrl: '{{ style_url }}',
 })
-export class {{ component_class }} {
-  readonly title = '{{ project_name }}';
-}
+export class {{ component_class }} {}

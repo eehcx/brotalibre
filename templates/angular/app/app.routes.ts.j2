@@ -1,0 +1,8 @@
+import { Routes } from '@angular/router';
+
+export const routes: Routes = [
+  { path: '', redirectTo: 'welcome', pathMatch: 'full' },
+  { path: 'welcome', loadComponent: () => import('./ui/_shared/pages/welcome.component').then(m => m.WelcomeComponent) },
+  { path: 'dashboard', loadComponent: () => import('./ui/_shared/pages/dashboard.component').then(m => m.DashboardComponent) },
+  { path: '**', loadComponent: () => import('./ui/_shared/pages/not-found.component').then(m => m.NotFoundComponent) },
+];
