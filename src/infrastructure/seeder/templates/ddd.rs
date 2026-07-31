@@ -327,15 +327,51 @@ mod tests {
         assert!(app_dir.join("app.html").exists());
         assert!(app_dir.join("app.config.ts").exists());
         assert!(app_dir.join("app.routes.ts").exists());
-        assert!(app_dir.join("ui/_shared/pages/welcome.component.ts").exists());
-        assert!(app_dir.join("ui/_shared/pages/dashboard.component.ts").exists());
-        assert!(app_dir.join("ui/_shared/pages/not-found.component.ts").exists());
-        assert!(app_dir.join("ui/_shared/pages/welcome.component.css").exists());
-        assert!(app_dir.join("ui/_shared/pages/dashboard.component.css").exists());
-        assert!(app_dir.join("ui/_shared/pages/not-found.component.css").exists());
-        assert!(app_dir.join("shared/layout/admin-shell.component.ts").exists());
-        assert!(app_dir.join("shared/layout/admin-shell.component.html").exists());
-        assert!(app_dir.join("shared/layout/admin-shell.component.css").exists());
+        assert!(
+            app_dir
+                .join("ui/_shared/pages/welcome.component.ts")
+                .exists()
+        );
+        assert!(
+            app_dir
+                .join("ui/_shared/pages/dashboard.component.ts")
+                .exists()
+        );
+        assert!(
+            app_dir
+                .join("ui/_shared/pages/not-found.component.ts")
+                .exists()
+        );
+        assert!(
+            app_dir
+                .join("ui/_shared/pages/welcome.component.css")
+                .exists()
+        );
+        assert!(
+            app_dir
+                .join("ui/_shared/pages/dashboard.component.css")
+                .exists()
+        );
+        assert!(
+            app_dir
+                .join("ui/_shared/pages/not-found.component.css")
+                .exists()
+        );
+        assert!(
+            app_dir
+                .join("shared/layout/admin-shell.component.ts")
+                .exists()
+        );
+        assert!(
+            app_dir
+                .join("shared/layout/admin-shell.component.html")
+                .exists()
+        );
+        assert!(
+            app_dir
+                .join("shared/layout/admin-shell.component.css")
+                .exists()
+        );
         assert!(app_dir.join("features").exists());
     }
 

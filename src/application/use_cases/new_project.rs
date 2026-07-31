@@ -772,14 +772,8 @@ mod tests {
             .execute(make_request("material-app", None, None, vec![]))
             .unwrap();
 
-        assert_eq!(
-            *seeder.resolved_ui.borrow(),
-            Some(UiChoice::Material)
-        );
-        assert_eq!(
-            *seeder.resolved_styles.borrow(),
-            Some(StylesChoice::Scss)
-        );
+        assert_eq!(*seeder.resolved_ui.borrow(), Some(UiChoice::Material));
+        assert_eq!(*seeder.resolved_styles.borrow(), Some(StylesChoice::Scss));
     }
 
     #[test]
@@ -807,13 +801,7 @@ mod tests {
         req.styles = Some(StylesChoice::Css);
         use_case.execute(req).unwrap();
 
-        assert_eq!(
-            *seeder.resolved_ui.borrow(),
-            Some(UiChoice::Primeng)
-        );
-        assert_eq!(
-            *seeder.resolved_styles.borrow(),
-            Some(StylesChoice::Css)
-        );
+        assert_eq!(*seeder.resolved_ui.borrow(), Some(UiChoice::Primeng));
+        assert_eq!(*seeder.resolved_styles.borrow(), Some(StylesChoice::Css));
     }
 }

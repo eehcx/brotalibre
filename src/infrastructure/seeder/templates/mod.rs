@@ -60,7 +60,11 @@ impl TemplateLoader {
     }
 }
 
-pub(crate) fn patch_admin_shell(template_base: &Path, app_dir: &Path, project_name: &str) -> Result<()> {
+pub(crate) fn patch_admin_shell(
+    template_base: &Path,
+    app_dir: &Path,
+    project_name: &str,
+) -> Result<()> {
     let loader = TemplateLoader::new(template_base)?;
     let layout_dir = app_dir.join("shared/layout");
     fs::create_dir_all(&layout_dir)
@@ -68,7 +72,11 @@ pub(crate) fn patch_admin_shell(template_base: &Path, app_dir: &Path, project_na
 
     let ctx = serde_json::json!({ "project_name": project_name });
 
-    for file in ["admin-shell.component.ts", "admin-shell.component.html", "admin-shell.component.css"] {
+    for file in [
+        "admin-shell.component.ts",
+        "admin-shell.component.html",
+        "admin-shell.component.css",
+    ] {
         write_file(
             &layout_dir.join(file),
             &loader.render(&format!("ui/_shared/layouts/{file}.j2"), &ctx)?,
@@ -89,10 +97,7 @@ pub(crate) fn patch_app_routes(
         .with_context(|| format!("failed to create {}", pages_dir.display()))?;
 
     let routes_path = app_dir.join("app.routes.ts");
-    write_file(
-        &routes_path,
-        &loader.render("app/app.routes.ts.j2", ())?,
-    )?;
+    write_file(&routes_path, &loader.render("app/app.routes.ts.j2", ())?)?;
 
     for page in ["welcome", "dashboard", "not-found"] {
         let ctx = if page == "welcome" {
@@ -103,10 +108,7 @@ pub(crate) fn patch_app_routes(
         for ext in ["ts", "html", "css"] {
             write_file(
                 &pages_dir.join(format!("{page}.component.{ext}")),
-                &loader.render(
-                    &format!("ui/_shared/pages/{page}.component.{ext}.j2"),
-                    &ctx,
-                )?,
+                &loader.render(&format!("ui/_shared/pages/{page}.component.{ext}.j2"), &ctx)?,
             )?;
         }
     }
@@ -130,7 +132,11 @@ pub(crate) fn render_feature_presentation(
         UiChoice::Primeng => "primeng",
         UiChoice::None => "tailwindcss",
     };
-    for (view, suffix, has_css) in [("list", "list", true), ("form", "form", true), ("detail", "detail", true)] {
+    for (view, suffix, has_css) in [
+        ("list", "list", true),
+        ("form", "form", true),
+        ("detail", "detail", true),
+    ] {
         let target_dir = feature_dir.join("presentation").join(view);
         write_file(
             &target_dir.join(format!("{name_kebab}-{suffix}.component.ts")),
@@ -161,7 +167,7 @@ pub(crate) fn render_feature_presentation(
                 &list_dir.join("confirm-dialog.component.ts"),
                 &loader.render(
                     "ui/material/list-view/confirm-dialog.component.ts.j2",
-                    &serde_json::json!({}),
+                    serde_json::json!({}),
                 )?,
             )?;
         }

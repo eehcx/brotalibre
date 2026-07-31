@@ -557,13 +557,10 @@ fn field_label(name: &str) -> String {
         }
         if i > 0 && c.is_uppercase() {
             let prev = chars[i - 1];
-            if prev == ' ' || prev == '_' || prev == '-' {
-                // already separated
-            } else if prev.is_lowercase() {
-                result.push(' ');
-            } else if prev.is_uppercase()
-                && i + 1 < chars.len()
-                && chars[i + 1].is_lowercase()
+            if prev != ' '
+                && prev != '_'
+                && prev != '-'
+                && (prev.is_lowercase() || (i + 1 < chars.len() && chars[i + 1].is_lowercase()))
             {
                 result.push(' ');
             }

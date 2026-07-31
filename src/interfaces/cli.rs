@@ -1,11 +1,11 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
 
+use crate::domain::profile::Profile;
 use crate::domain::project::ArchitectureProfile;
 use crate::domain::project::DocsEngine;
 use crate::domain::project::Framework;
 use crate::domain::project::GenerateFeatureRequest;
-use crate::domain::profile::Profile;
 use crate::domain::project::NewProjectRequest;
 use crate::domain::project::PackageManager;
 use crate::domain::project::UiChoice;
@@ -349,8 +349,7 @@ mod tests {
 
     #[test]
     fn parse_new_command_with_profile_angular_admin() {
-        let command =
-            parse_from(["brota", "new", "demo", "--profile", "angular-admin"]).unwrap();
+        let command = parse_from(["brota", "new", "demo", "--profile", "angular-admin"]).unwrap();
 
         let request = match command {
             AppCommand::New(r) => r,
