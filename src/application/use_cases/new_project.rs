@@ -1,6 +1,7 @@
 use anyhow::{Result, bail};
 
 use crate::application::ports::AstroSeeder;
+use crate::application::ports::ConfigWriter;
 use crate::application::ports::Environment;
 use crate::application::ports::ProgressReporter;
 use crate::application::ports::Seeder;
@@ -14,6 +15,7 @@ use crate::domain::project::NewProjectRequest;
 use crate::domain::project::PackageManager;
 use crate::domain::project::ResolvedOptions;
 use crate::domain::project::UiChoice;
+use crate::domain::project_config::ProjectConfig;
 use crate::domain::styles_choice::StylesChoice;
 
 pub struct NewProjectUseCase<'a> {
@@ -22,6 +24,7 @@ pub struct NewProjectUseCase<'a> {
     seeder: &'a dyn Seeder,
     astro_seeder: &'a dyn AstroSeeder,
     reporter: &'a dyn ProgressReporter,
+    config_writer: &'a dyn ConfigWriter,
 }
 
 impl<'a> NewProjectUseCase<'a> {
@@ -31,6 +34,7 @@ impl<'a> NewProjectUseCase<'a> {
         seeder: &'a dyn Seeder,
         astro_seeder: &'a dyn AstroSeeder,
         reporter: &'a dyn ProgressReporter,
+        config_writer: &'a dyn ConfigWriter,
     ) -> Self {
         Self {
             env,
@@ -38,6 +42,7 @@ impl<'a> NewProjectUseCase<'a> {
             seeder,
             astro_seeder,
             reporter,
+            config_writer,
         }
     }
 
@@ -50,13 +55,18 @@ impl<'a> NewProjectUseCase<'a> {
 
         let framework = self.resolve_framework(&request)?;
 
+        let effective_profile = request.profile.unwrap_or(match framework {
+            Framework::Angular => Profile::AngularAdmin,
+            Framework::Astro => Profile::AstroDocs,
+        });
+
         match framework {
-            Framework::Astro => self.execute_astro(&request),
-            Framework::Angular => self.execute_angular(&request),
+            Framework::Astro => self.execute_astro(&request, effective_profile),
+            Framework::Angular => self.execute_angular(&request, effective_profile),
         }
     }
 
-    fn execute_angular(&self, request: &NewProjectRequest) -> Result<()> {
+    fn execute_angular(&self, request: &NewProjectRequest, profile: Profile) -> Result<()> {
         let options = self.resolve_angular_options(request)?;
 
         self.reporter
@@ -147,10 +157,14 @@ impl<'a> NewProjectUseCase<'a> {
         self.reporter
             .summary(&request.project_name, &absolute_project_dir, options);
 
+        let config = ProjectConfig::from_resolved(&request.project_name, profile, &options);
+        self.config_writer
+            .write_config(&absolute_project_dir, &config)?;
+
         Ok(())
     }
 
-    fn execute_astro(&self, request: &NewProjectRequest) -> Result<()> {
+    fn execute_astro(&self, request: &NewProjectRequest, profile: Profile) -> Result<()> {
         let options = self.resolve_astro_options(request)?;
 
         self.reporter
@@ -211,6 +225,10 @@ impl<'a> NewProjectUseCase<'a> {
 
         self.reporter
             .astro_summary(&request.project_name, &absolute_project_dir, &options);
+
+        let config = ProjectConfig::from_astro_resolved(&request.project_name, profile, &options);
+        self.config_writer
+            .write_config(&absolute_project_dir, &config)?;
 
         Ok(())
     }
@@ -321,6 +339,7 @@ mod tests {
 
     use super::*;
     use crate::application::ports::AstroSeeder;
+    use crate::application::ports::ConfigWriter;
     use crate::application::ports::Environment;
     use crate::application::ports::ProgressReporter;
     use crate::application::ports::Seeder;
@@ -328,6 +347,7 @@ mod tests {
     use crate::domain::project::DocsEngine;
     use crate::domain::project::NewProjectRequest;
     use crate::domain::project::PackageManager;
+    use crate::domain::project_config::ProjectConfig;
 
     struct FakeUiSelector {
         framework: Framework,
@@ -520,6 +540,24 @@ mod tests {
         }
     }
 
+    #[derive(Default)]
+    struct FakeConfigWriter {
+        calls: RefCell<Vec<String>>,
+        last_config: RefCell<Option<ProjectConfig>>,
+        last_dir: RefCell<Option<PathBuf>>,
+    }
+
+    impl ConfigWriter for FakeConfigWriter {
+        fn write_config(&self, project_dir: &Path, config: &ProjectConfig) -> Result<()> {
+            self.calls.borrow_mut().push("write_config".to_string());
+            self.last_config.borrow_mut().replace(config.clone());
+            self.last_dir
+                .borrow_mut()
+                .replace(project_dir.to_path_buf());
+            Ok(())
+        }
+    }
+
     fn make_request(
         project_name: &str,
         framework: Option<Framework>,
@@ -558,8 +596,15 @@ mod tests {
         let seeder = FakeSeeder::default();
         let astro_seeder = FakeAstroSeeder::default();
         let reporter = FakeReporter;
-        let use_case =
-            NewProjectUseCase::new(&env, &ui_selector, &seeder, &astro_seeder, &reporter);
+        let config_writer = FakeConfigWriter::default();
+        let use_case = NewProjectUseCase::new(
+            &env,
+            &ui_selector,
+            &seeder,
+            &astro_seeder,
+            &reporter,
+            &config_writer,
+        );
 
         use_case
             .execute(make_request("demo-app", None, None, vec![]))
@@ -577,6 +622,27 @@ mod tests {
         );
         // The Angular flow must never touch the Astro seeder.
         assert!(astro_seeder.calls.borrow().is_empty());
+        // Config writer must have been called with the right profile
+        assert!(
+            config_writer
+                .calls
+                .borrow()
+                .contains(&"write_config".to_string())
+        );
+        assert_eq!(
+            config_writer.last_config.borrow().as_ref().unwrap().profile,
+            "angular-admin"
+        );
+        assert_eq!(
+            config_writer
+                .last_config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .project
+                .name,
+            "demo-app"
+        );
     }
 
     #[test]
@@ -595,8 +661,15 @@ mod tests {
         let seeder = FakeSeeder::default();
         let astro_seeder = FakeAstroSeeder::default();
         let reporter = FakeReporter;
-        let use_case =
-            NewProjectUseCase::new(&env, &ui_selector, &seeder, &astro_seeder, &reporter);
+        let config_writer = FakeConfigWriter::default();
+        let use_case = NewProjectUseCase::new(
+            &env,
+            &ui_selector,
+            &seeder,
+            &astro_seeder,
+            &reporter,
+            &config_writer,
+        );
 
         use_case
             .execute(NewProjectRequest {
@@ -624,6 +697,38 @@ mod tests {
             ]
         );
         assert!(seeder.calls.borrow().is_empty());
+        // Config writer must reflect the inferred AstroDocs profile
+        assert!(
+            config_writer
+                .calls
+                .borrow()
+                .contains(&"write_config".to_string())
+        );
+        assert_eq!(
+            config_writer.last_config.borrow().as_ref().unwrap().profile,
+            "astro-docs"
+        );
+        assert_eq!(
+            config_writer
+                .last_config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .project
+                .name,
+            "interactive-docs"
+        );
+        assert_eq!(
+            config_writer
+                .last_config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .project
+                .locale
+                .as_deref(),
+            Some("en")
+        );
     }
 
     #[test]
@@ -642,8 +747,15 @@ mod tests {
         let seeder = FakeSeeder::default();
         let astro_seeder = FakeAstroSeeder::default();
         let reporter = FakeReporter;
-        let use_case =
-            NewProjectUseCase::new(&env, &ui_selector, &seeder, &astro_seeder, &reporter);
+        let config_writer = FakeConfigWriter::default();
+        let use_case = NewProjectUseCase::new(
+            &env,
+            &ui_selector,
+            &seeder,
+            &astro_seeder,
+            &reporter,
+            &config_writer,
+        );
 
         use_case
             .execute(make_request(
@@ -683,8 +795,15 @@ mod tests {
         let seeder = FakeSeeder::default();
         let astro_seeder = FakeAstroSeeder::default();
         let reporter = FakeReporter;
-        let use_case =
-            NewProjectUseCase::new(&env, &ui_selector, &seeder, &astro_seeder, &reporter);
+        let config_writer = FakeConfigWriter::default();
+        let use_case = NewProjectUseCase::new(
+            &env,
+            &ui_selector,
+            &seeder,
+            &astro_seeder,
+            &reporter,
+            &config_writer,
+        );
 
         use_case
             .execute(make_request(
@@ -722,8 +841,15 @@ mod tests {
         let seeder = FakeSeeder::default();
         let astro_seeder = FakeAstroSeeder::default();
         let reporter = FakeReporter;
-        let use_case =
-            NewProjectUseCase::new(&env, &ui_selector, &seeder, &astro_seeder, &reporter);
+        let config_writer = FakeConfigWriter::default();
+        let use_case = NewProjectUseCase::new(
+            &env,
+            &ui_selector,
+            &seeder,
+            &astro_seeder,
+            &reporter,
+            &config_writer,
+        );
 
         use_case
             .execute(make_request(
@@ -764,8 +890,15 @@ mod tests {
         let seeder = FakeSeeder::default();
         let astro_seeder = FakeAstroSeeder::default();
         let reporter = FakeReporter;
-        let use_case =
-            NewProjectUseCase::new(&env, &ui_selector, &seeder, &astro_seeder, &reporter);
+        let config_writer = FakeConfigWriter::default();
+        let use_case = NewProjectUseCase::new(
+            &env,
+            &ui_selector,
+            &seeder,
+            &astro_seeder,
+            &reporter,
+            &config_writer,
+        );
 
         // Request: yes=true, profile=None → should apply AngularAdmin defaults
         use_case
@@ -774,6 +907,38 @@ mod tests {
 
         assert_eq!(*seeder.resolved_ui.borrow(), Some(UiChoice::Material));
         assert_eq!(*seeder.resolved_styles.borrow(), Some(StylesChoice::Scss));
+
+        // Config writer must have been called with the defaulted profile
+        assert!(
+            config_writer
+                .calls
+                .borrow()
+                .contains(&"write_config".to_string())
+        );
+        assert_eq!(
+            config_writer.last_config.borrow().as_ref().unwrap().profile,
+            "angular-admin"
+        );
+        assert_eq!(
+            config_writer
+                .last_config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .target
+                .framework,
+            "angular"
+        );
+        assert_eq!(
+            config_writer
+                .last_config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .target
+                .package_manager,
+            "npm"
+        );
     }
 
     #[test]
@@ -792,8 +957,15 @@ mod tests {
         let seeder = FakeSeeder::default();
         let astro_seeder = FakeAstroSeeder::default();
         let reporter = FakeReporter;
-        let use_case =
-            NewProjectUseCase::new(&env, &ui_selector, &seeder, &astro_seeder, &reporter);
+        let config_writer = FakeConfigWriter::default();
+        let use_case = NewProjectUseCase::new(
+            &env,
+            &ui_selector,
+            &seeder,
+            &astro_seeder,
+            &reporter,
+            &config_writer,
+        );
 
         // Request: yes=true, profile=None, but explicit ui→Primeng, styles→Css
         let mut req = make_request("primeng-app", None, None, vec![]);
@@ -803,5 +975,31 @@ mod tests {
 
         assert_eq!(*seeder.resolved_ui.borrow(), Some(UiChoice::Primeng));
         assert_eq!(*seeder.resolved_styles.borrow(), Some(StylesChoice::Css));
+
+        // Config must reflect the explicit overrides
+        assert_eq!(
+            config_writer
+                .last_config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .ui
+                .as_ref()
+                .unwrap()
+                .library,
+            "primeng"
+        );
+        assert_eq!(
+            config_writer
+                .last_config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .ui
+                .as_ref()
+                .unwrap()
+                .style_engine,
+            "css"
+        );
     }
 }
