@@ -46,10 +46,11 @@ of framework, architecture, UI library, state, API transport, layouts, and
 page types. Advanced configuration may override a profile only where that
 override has a clear, testable meaning.
 
-## Planned Project Configuration
+## Project Configuration
 
-`brota.yaml` is the planned persistent source of project-generation decisions.
-The following is a target shape, not a final public schema:
+`brota.yaml` is the persistent source of project-generation decisions.
+The following is the target schema (write path is implemented in `feat/brota-yaml-persistence`;
+the read path for feature generation is tracked under milestone 0.5.0):
 
 ```yaml
 schemaVersion: "1"
