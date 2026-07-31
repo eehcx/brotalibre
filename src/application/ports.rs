@@ -91,6 +91,14 @@ pub trait AstroSeeder {
     ) -> Result<()>;
 }
 
+pub trait ConfigWriter {
+    fn write_config(
+        &self,
+        project_dir: &Path,
+        config: &crate::domain::project_config::ProjectConfig,
+    ) -> Result<()>;
+}
+
 pub trait ProgressReporter {
     //fn show_banner(&self);
     fn stage_start(&self, stage: &str, message: &str);
