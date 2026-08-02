@@ -28,6 +28,7 @@ struct Cli {
 #[derive(Subcommand, Debug)]
 enum Commands {
     New(NewCommand),
+    #[command(alias = "g")]
     Generate(GenerateCommand),
 }
 
@@ -39,21 +40,13 @@ struct GenerateCommand {
 
 #[derive(Subcommand, Debug)]
 enum GenerateSubCommand {
+    #[command(alias = "f")]
     Feature(GenerateFeatureCommand),
 }
 
 #[derive(Parser, Debug)]
 struct GenerateFeatureCommand {
     name: String,
-
-    #[arg(long, value_enum)]
-    ui: Option<CliUiChoice>,
-
-    #[arg(long, value_enum)]
-    styles: Option<CliStylesChoice>,
-
-    #[arg(long, value_enum)]
-    architecture: Option<CliArchitectureProfile>,
 
     #[arg(long, default_value = "api")]
     prefix: String,
@@ -204,11 +197,6 @@ fn map_cli_to_command(cli: Cli) -> AppCommand {
                 AppCommand::GenerateFeature(GenerateFeatureRequest {
                     project_dir,
                     name: sub.name,
-                    ui: sub.ui.map(Into::into),
-                    styles: sub.styles.map(Into::into),
-                    architecture: sub
-                        .architecture
-                        .map_or(ArchitectureProfile::Clean, Into::into),
                     prefix: sub.prefix,
                     fields: sub.fields,
                 })
@@ -442,9 +430,21 @@ mod tests {
             _ => panic!("expected GenerateFeature command"),
         };
         assert_eq!(request.name, "user");
-        assert_eq!(request.architecture, ArchitectureProfile::Clean);
         assert_eq!(request.prefix, "api");
         assert!(request.fields.is_empty());
+    }
+
+    #[test]
+    fn parse_generate_feature_short_alias() {
+        let command = parse_from(["brota", "g", "f", "product"]).unwrap();
+
+        let request = match command {
+            AppCommand::GenerateFeature(r) => r,
+            _ => panic!("expected GenerateFeature command"),
+        };
+
+        assert_eq!(request.name, "product");
+        assert_eq!(request.prefix, "api");
     }
 
     #[test]
@@ -458,8 +458,6 @@ mod tests {
             "name:string,price:number",
             "--prefix",
             "v1",
-            "--architecture",
-            "ddd",
         ])
         .unwrap();
 
@@ -468,13 +466,12 @@ mod tests {
             _ => panic!("expected GenerateFeature command"),
         };
         assert_eq!(request.name, "product");
-        assert_eq!(request.architecture, ArchitectureProfile::Ddd);
         assert_eq!(request.prefix, "v1");
         assert_eq!(request.fields, vec!["name:string", "price:number"]);
     }
 
     #[test]
-    fn parse_generate_feature_without_fields_and_architecture() {
+    fn parse_generate_feature_without_fields() {
         let command = parse_from(["brota", "generate", "feature", "my-feature"]).unwrap();
 
         let request = match command {
@@ -482,7 +479,6 @@ mod tests {
             _ => panic!("expected GenerateFeature command"),
         };
         assert_eq!(request.name, "my-feature");
-        assert_eq!(request.architecture, ArchitectureProfile::Clean);
         assert_eq!(request.prefix, "api");
         assert!(request.fields.is_empty());
     }

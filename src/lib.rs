@@ -8,7 +8,7 @@ mod interfaces;
 
 use application::use_cases::generate_feature::GenerateFeatureUseCase;
 use application::use_cases::new_project::NewProjectUseCase;
-use infrastructure::config_writer::SystemConfigWriter;
+use infrastructure::config_writer::{SystemConfigReader, SystemConfigWriter};
 use infrastructure::console_progress_reporter::ConsoleProgressReporter;
 use infrastructure::dialoguer_ui_selector::DialoguerUiSelector;
 use infrastructure::seeder::SystemSeeder;
@@ -53,8 +53,9 @@ pub fn run() -> Result<()> {
         interfaces::cli::AppCommand::GenerateFeature(request) => {
             let seeder = SystemSeeder;
             let reporter = ConsoleProgressReporter::default();
+            let config_reader = SystemConfigReader;
 
-            let use_case = GenerateFeatureUseCase::new(&seeder, &reporter);
+            let use_case = GenerateFeatureUseCase::new(&seeder, &reporter, &config_reader);
             use_case.execute(request)
         }
     }
