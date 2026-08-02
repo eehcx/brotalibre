@@ -89,7 +89,7 @@ impl Seeder for SystemSeeder {
         match architecture {
             ArchitectureProfile::Clean => templates::clean::apply_clean_feature_template(
                 &template_base,
-                &project_dir.join("src/app"),
+                &project_dir.join("src/app/features"),
                 name,
                 prefix,
                 &fields_json,
@@ -448,7 +448,7 @@ fn patch_app_config(
     let kebab = normalize_name(name);
     let snake = kebab.replace('-', "_").to_uppercase();
     let feature_path = match architecture {
-        ArchitectureProfile::Clean => format!("./{kebab}"),
+        ArchitectureProfile::Clean => format!("./features/{kebab}"),
         ArchitectureProfile::Ddd => format!("./features/{kebab}"),
     };
     let provider_import = format!(
@@ -505,7 +505,7 @@ fn patch_app_routes(
     let kebab = normalize_name(name);
     let pascal = pascal_case(&kebab);
     let feature_path = match architecture {
-        ArchitectureProfile::Clean => format!("./{kebab}"),
+        ArchitectureProfile::Clean => format!("./features/{kebab}"),
         ArchitectureProfile::Ddd => format!("./features/{kebab}"),
     };
     let mut content = std::fs::read_to_string(&path)?;
@@ -628,6 +628,37 @@ mod tests {
 
         let rendered = loader.render("app/app.config.ts.j2", ()).unwrap();
         assert!(rendered.contains("ApplicationConfig"));
+    }
+
+    #[test]
+    fn clean_feature_patches_use_feature_root_imports() {
+        let tmp = tempdir().unwrap();
+        let app_dir = tmp.path().join("src/app");
+        fs::create_dir_all(&app_dir).unwrap();
+        fs::write(
+            app_dir.join("app.config.ts"),
+            "export const appConfig = { providers: [provideRouter(routes)] };",
+        )
+        .unwrap();
+        fs::write(
+            app_dir.join("app.routes.ts"),
+            "import { Routes } from '@angular/router';\n\nexport const routes: Routes = [\n  { path: '**', redirectTo: '' },\n];\n",
+        )
+        .unwrap();
+
+        patch_app_config(
+            tmp.path(),
+            ArchitectureProfile::Clean,
+            "users",
+            UiChoice::None,
+        )
+        .unwrap();
+        patch_app_routes(tmp.path(), ArchitectureProfile::Clean, "users").unwrap();
+
+        let config = fs::read_to_string(app_dir.join("app.config.ts")).unwrap();
+        let routes = fs::read_to_string(app_dir.join("app.routes.ts")).unwrap();
+        assert!(config.contains("./features/users/infrastructure/users.provider"));
+        assert!(routes.contains("./features/users/presentation/list/users-list.component"));
     }
 
     #[test]

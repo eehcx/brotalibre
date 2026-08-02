@@ -96,14 +96,14 @@ validate_clean() {
 
   if [ -f "$dir/src/app/app.ts" ]; then
     ok "src/app/app.ts"
-    grep -q "readonly title" "$dir/src/app/app.ts" 2>/dev/null \
-      && ok "  has title property" \
-      || fail "  missing title property"
+    grep -q "AdminShellComponent" "$dir/src/app/app.ts" 2>/dev/null \
+      && ok "  imports AdminShellComponent" \
+      || fail "  missing AdminShellComponent import"
   elif [ -f "$dir/src/app/app.component.ts" ]; then
     ok "src/app/app.component.ts"
-    grep -q "readonly title" "$dir/src/app/app.component.ts" 2>/dev/null \
-      && ok "  has title property" \
-      || fail "  missing title property"
+    grep -q "AdminShellComponent" "$dir/src/app/app.component.ts" 2>/dev/null \
+      && ok "  imports AdminShellComponent" \
+      || fail "  missing AdminShellComponent import"
   else
     fail "app.ts or app.component.ts not found"
     e=1
@@ -111,14 +111,14 @@ validate_clean() {
 
   if [ -f "$dir/src/app/app.html" ]; then
     ok "src/app/app.html"
-    grep -q "brotalibre" "$dir/src/app/app.html" 2>/dev/null \
-      && ok "  has brotalibre branding" \
-      || fail "  missing brotalibre branding"
+    grep -q "app-admin-shell" "$dir/src/app/app.html" 2>/dev/null \
+      && ok "  renders admin shell" \
+      || fail "  missing admin shell"
   elif [ -f "$dir/src/app/app.component.html" ]; then
     ok "src/app/app.component.html"
-    grep -q "brotalibre" "$dir/src/app/app.component.html" 2>/dev/null \
-      && ok "  has brotalibre branding" \
-      || fail "  missing brotalibre branding"
+    grep -q "app-admin-shell" "$dir/src/app/app.component.html" 2>/dev/null \
+      && ok "  renders admin shell" \
+      || fail "  missing admin shell"
   else
     fail "app.html or app.component.html not found"
     e=1
@@ -245,7 +245,7 @@ validate_feature() {
 
   local base
   case "$arch" in
-    clean) base="$dir/src/app/$feature" ;;
+    clean) base="$dir/src/app/features/$feature" ;;
     ddd)   base="$dir/src/app/features/$feature" ;;
   esac
 
@@ -303,10 +303,10 @@ run_test() {
   local BROTA_ARGS=("new" "$PROJECT_NAME" "--yes"
     "--architecture" "$arch"
     "--ui" "$ui"
-    "--styles" "$styles"
     "--package-manager" "$pm"
     "--skip-install"
   )
+  [ "$styles" != "none" ] && BROTA_ARGS+=("--styles" "$styles")
   [ -n "$skip_git" ] && BROTA_ARGS+=("$skip_git")
 
   info "Running: brota ${BROTA_ARGS[*]}"
@@ -346,7 +346,6 @@ run_test() {
   # Run from $TMPDIR (where templates/ symlink lives) and pass --project-dir
   local FEATURE_NAME="test-entity"
   local GEN_ARGS=("generate" "feature" "$FEATURE_NAME"
-    "--architecture" "$arch"
     "--prefix" "api"
     "--fields" "name:string,age:number,email:string"
     "--project-dir" "$PROJECT_DIR"

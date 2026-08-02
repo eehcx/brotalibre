@@ -37,7 +37,6 @@ src/app/
 ```bash
 brota new my-app --architecture ddd
 brota generate feature product \
-  --architecture ddd \
   --prefix /api/products \
   --fields name:string,price:number \
   --project-dir ./my-app

@@ -84,7 +84,6 @@ After project generation, the script runs:
 
 ```bash
 brota generate feature test-entity \
-  --architecture <arch> \
   --prefix api \
   --fields name:string,age:number,email:string \
   --project-dir <PROJECT_DIR>
@@ -92,7 +91,7 @@ brota generate feature test-entity \
 
 Then validates that 15 files exist in the correct location:
 
-- **Clean:** files under `src/app/test-entity/{domain,application,infrastructure}/`
+- **Clean:** files under `src/app/features/test-entity/{domain,application,infrastructure}/`
 - **DDD:** files under `src/app/features/test-entity/{domain,application,infrastructure}/`
 
 | Layer | File |
@@ -113,7 +112,8 @@ Then validates that 15 files exist in the correct location:
 | infrastructure | `test-entity.repository.ts` |
 | infrastructure | `test-entity.provider.ts` |
 
-The generated feature also includes a mock repository adapter. Use `--ui material` or `--ui primeng` to render those component sets explicitly. Use `--styles tailwindcss` with `--ui none` to render the Tailwind-style presentation templates; plain CSS leaves presentation optional.
+The generated feature also includes a mock repository adapter. Its architecture,
+UI library, and style engine come from the generated project's `brota.yaml`.
 
 ## Modes explained
 

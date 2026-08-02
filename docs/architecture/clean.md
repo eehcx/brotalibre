@@ -9,11 +9,12 @@ or when the application has strong platform-level conventions.
 
 ```text
 src/app/
-└── <feature>/
-    ├── domain/
-    ├── application/
-    ├── infrastructure/
-    └── presentation/
+└── features/
+    └── <feature>/
+        ├── domain/
+        ├── application/
+        ├── infrastructure/
+        └── presentation/
 ```
 
 | Layer | Responsibility | Allowed direction |
@@ -35,10 +36,9 @@ src/app/
 ```bash
 brota new my-app --architecture clean
 brota generate feature user \
-  --architecture clean \
   --fields name:string,email:string \
   --project-dir ./my-app
 ```
 
 The feature generator writes files under
-`src/app/user/{domain,application,infrastructure,presentation}`.
+`src/app/features/user/{domain,application,infrastructure,presentation}`.
