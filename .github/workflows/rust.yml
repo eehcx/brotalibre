@@ -110,13 +110,25 @@ jobs:
           PROJECT_DIR="${RUNNER_TEMP}/cargo-project"
           cargo install --path . --root "${INSTALL_ROOT}" --locked
           mkdir -p "${PROJECT_DIR}/src/app" "${RUNNER_TEMP}/cargo-cwd"
+          cat > "${PROJECT_DIR}/brota.yaml" <<'EOF'
+          schemaVersion: '1'
+          project:
+            name: cargo-install
+          profile: angular-admin
+          target:
+            framework: angular
+            architecture: feature-clean
+            packageManager: npm
+          ui:
+            library: native
+            styleEngine: scss
+          EOF
           (
             cd "${RUNNER_TEMP}/cargo-cwd"
             "${INSTALL_ROOT}/bin/brota" generate feature cargo-install \
-              --architecture clean \
               --project-dir "${PROJECT_DIR}"
           )
-          test -f "${PROJECT_DIR}/src/app/cargo-install/domain/cargo-install.entity.ts"
+          test -f "${PROJECT_DIR}/src/app/features/cargo-install/domain/cargo-install.entity.ts"
 
       - name: Verify release archive
         shell: bash
@@ -130,10 +142,22 @@ jobs:
             -C target/release brota \
             -C "${GITHUB_WORKSPACE}" templates
           tar -xzf "${ARCHIVE_ROOT}/brotalibre.tar.gz" -C "${ARCHIVE_ROOT}/extracted"
+          cat > "${PROJECT_DIR}/brota.yaml" <<'EOF'
+          schemaVersion: '1'
+          project:
+            name: archive-install
+          profile: angular-admin
+          target:
+            framework: angular
+            architecture: feature-clean
+            packageManager: npm
+          ui:
+            library: native
+            styleEngine: scss
+          EOF
           (
             cd "${ARCHIVE_ROOT}/cwd"
             "${ARCHIVE_ROOT}/extracted/brota" generate feature archive-install \
-              --architecture clean \
               --project-dir "${PROJECT_DIR}"
           )
-          test -f "${PROJECT_DIR}/src/app/archive-install/domain/archive-install.entity.ts"
+          test -f "${PROJECT_DIR}/src/app/features/archive-install/domain/archive-install.entity.ts"
