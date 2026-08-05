@@ -99,6 +99,13 @@ pub trait ConfigWriter {
     ) -> Result<()>;
 }
 
+pub trait ConfigReader {
+    fn read_config(
+        &self,
+        project_dir: &Path,
+    ) -> Result<crate::domain::project_config::ProjectConfig>;
+}
+
 pub trait ProgressReporter {
     //fn show_banner(&self);
     fn stage_start(&self, stage: &str, message: &str);

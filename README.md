@@ -18,7 +18,7 @@ Frontend scaffolding from architecture to a runnable project foundation.
 ```bash
 brota new my-app
 brota new docs-site --framework astro --docs-engine starlight --i18n en,es
-brota generate feature user --architecture clean --fields name:string,email:string
+brota generate feature user --fields name:string,email:string
 ```
 
 ## Quick start
@@ -139,24 +139,24 @@ application features; Astro documentation content is created through
 `brota new --framework astro`.
 
 ```bash
-# Clean architecture: files go to src/app/<name>/{domain,application,infrastructure}/
-brota generate feature user --architecture clean --fields name:string,email:string,age:number
+# Uses the architecture, UI library, and style engine from brota.yaml.
+brota generate feature user --fields name:string,email:string,age:number
 
-# DDD: files go to src/app/features/<name>/{domain,application,infrastructure}/
-brota generate feature product --architecture ddd --prefix /api/products --fields name:string,price:number
+# Short alias for generate feature.
+brota g f product --prefix /api/products --fields name:string,price:number
 
 # Generate into a specific project (default: current dir)
-brota generate feature user --architecture clean --project-dir ./my-app --fields name:string
+brota generate feature user --project-dir ./my-app --fields name:string
 ```
+
+The project must contain a valid `brota.yaml`. `generate feature` uses it as the
+single source of truth for architecture, UI library, and style engine.
 
 Flags for `generate feature`:
 
 | Flag | Values | Default | Description |
 |------|--------|---------|-------------|
 | `<NAME>` (positional) | kebab-case string | required | Feature name |
-| `--architecture` | `clean` / `ddd` | `clean` | Architecture profile |
-| `--ui` | `material` / `primeng` / `none` | `none` | Presentation templates to render |
-| `--styles` | `css` / `scss` / `sass` / `less` / `tailwindcss` | `css` | When `--ui none` is used, Tailwind presentation templates require `tailwindcss` |
 | `--prefix` | string | `api` | API prefix for the repository base URL |
 | `--fields` | comma-separated `name:type` | none | Entity fields |
 | `--project-dir` | path | cwd | Target project root |
@@ -169,7 +169,7 @@ projects and feature generation.
 
 | Architecture | Best fit | Generated layout | Guide |
 |--------------|----------|------------------|-------|
-| Clean Architecture | Layered applications with explicit dependency direction | `src/app/<feature>/{domain,application,infrastructure,presentation}` | [`docs/architecture/clean.md`](docs/architecture/clean.md) |
+| Clean Architecture | Feature-oriented applications with explicit dependency direction | `src/app/features/<feature>/{domain,application,infrastructure,presentation}` | [`docs/architecture/clean.md`](docs/architecture/clean.md) |
 | Domain-Driven Design | Feature teams and vertical slices with strong domain ownership | `src/app/features/<feature>/{domain,application,infrastructure,presentation}` | [`docs/architecture/ddd.md`](docs/architecture/ddd.md) |
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the development workflow and

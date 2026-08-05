@@ -48,9 +48,11 @@ override has a clear, testable meaning.
 
 ## Project Configuration
 
-`brota.yaml` is the persistent source of project-generation decisions.
-The following is the target schema (write path is implemented in `feat/brota-yaml-persistence`;
-the read path for feature generation is tracked under milestone 0.5.0):
+`brota.yaml` is the persistent source of project-generation decisions. The
+following is the target schema. The initial 0.5.0 implementation persists and
+reads the core fields needed by Angular feature generation; the remaining
+sections are future extensions and must only be added when they drive real
+generation behavior:
 
 ```yaml
 schemaVersion: "1"

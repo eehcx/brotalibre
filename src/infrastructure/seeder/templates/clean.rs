@@ -400,6 +400,7 @@ mod tests {
         let tmp = tempdir().unwrap();
         let app_dir = tmp.path().join("src/app");
         create_app_dir(&app_dir);
+        let features_dir = app_dir.join("features");
 
         let fields = vec![
             serde_json::json!({"name": "email", "type": "string"}),
@@ -407,7 +408,7 @@ mod tests {
         ];
         apply_clean_feature_template(
             &template_base(),
-            &app_dir,
+            &features_dir,
             "user",
             "api",
             &fields,
@@ -416,19 +417,23 @@ mod tests {
         )
         .unwrap();
 
-        let files = feature_files(&app_dir, "user");
+        let files = feature_files(&features_dir, "user");
         for f in &files {
             assert!(f.exists(), "missing file: {}", f.display());
         }
         assert_eq!(files.len(), 15);
-        assert!(app_dir.join("user/infrastructure/user.mock.ts").exists());
         assert!(
-            app_dir
+            features_dir
+                .join("user/infrastructure/user.mock.ts")
+                .exists()
+        );
+        assert!(
+            features_dir
                 .join("user/presentation/list/user-list.component.ts")
                 .exists()
         );
         let list =
-            fs::read_to_string(app_dir.join("user/presentation/list/user-list.component.ts"))
+            fs::read_to_string(features_dir.join("user/presentation/list/user-list.component.ts"))
                 .unwrap();
         assert!(list.contains("UserStore"));
         assert!(!list.contains("Facade"));
@@ -439,10 +444,11 @@ mod tests {
         let tmp = tempdir().unwrap();
         let app_dir = tmp.path().join("src/app");
         create_app_dir(&app_dir);
+        let features_dir = app_dir.join("features");
 
         apply_clean_feature_template(
             &template_base(),
-            &app_dir,
+            &features_dir,
             "my-feature",
             "api",
             &[],
@@ -451,7 +457,7 @@ mod tests {
         )
         .unwrap();
 
-        let files = feature_files(&app_dir, "my-feature");
+        let files = feature_files(&features_dir, "my-feature");
         for f in &files {
             assert!(f.exists(), "missing file: {}", f.display());
         }
@@ -476,10 +482,11 @@ mod tests {
         let tmp = tempdir().unwrap();
         let app_dir = tmp.path().join("src/app");
         create_app_dir(&app_dir);
+        let features_dir = app_dir.join("features");
 
         apply_clean_feature_template(
             &template_base(),
-            &app_dir,
+            &features_dir,
             "shopping cart",
             "api",
             &[serde_json::json!({"name": "items", "type": "array"})],
@@ -488,7 +495,7 @@ mod tests {
         )
         .unwrap();
 
-        let files = feature_files(&app_dir, "shopping-cart");
+        let files = feature_files(&features_dir, "shopping-cart");
         for f in &files {
             assert!(f.exists(), "missing file: {}", f.display());
         }
@@ -499,11 +506,12 @@ mod tests {
         let tmp = tempdir().unwrap();
         let app_dir = tmp.path().join("src/app");
         create_app_dir(&app_dir);
+        let features_dir = app_dir.join("features");
 
         let bad_base = tmp.path().join("no-templates");
         apply_clean_feature_template(
             &bad_base,
-            &app_dir,
+            &features_dir,
             "user",
             "api",
             &[],
@@ -512,6 +520,6 @@ mod tests {
         )
         .unwrap();
 
-        assert!(app_dir.join("user/domain/user.entity.ts").exists());
+        assert!(features_dir.join("user/domain/user.entity.ts").exists());
     }
 }
